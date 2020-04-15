@@ -16,8 +16,7 @@ class FileUtils:
         if FileUtils.allowed_file(filename):
             #File Name & Path
             filename = secure_filename(filename)
-            path = os.path.join(BASE_PATH, 'raw')
-            path = os.path.join(path, filename)
+            path = FileUtils.path('raw', filename)
             #Basse64 Decode
             key = ';base64,'
             index = content.find(key)
@@ -45,3 +44,13 @@ class FileUtils:
                 if not file == '.DS_Store':
                     files.append(file)
         return files
+
+    @staticmethod
+    def file_format(filename: str) -> str:
+        return filename.split('.')[-1]
+
+    @staticmethod
+    def path(dir: str, filename: str):
+        path = os.path.join(BASE_PATH, dir)
+        path = os.path.join(path, filename)
+        return path

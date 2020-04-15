@@ -5,3 +5,7 @@ external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css', dbc.themes
 
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 app.config.suppress_callback_exceptions = True
+
+db = {}
+db["Test"] = "Sample Data"
+db["file"] = None

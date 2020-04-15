@@ -1,4 +1,5 @@
 import dash_bootstrap_components as dbc
+import dash_html_components as html
 
 def navbar(page_name: str):
     nav = dbc.NavbarSimple(
@@ -6,8 +7,8 @@ def navbar(page_name: str):
             dbc.NavItem(dbc.NavLink(page_name)),
             dbc.DropdownMenu(
                 children=[
-                    dbc.DropdownMenuItem("Linear Classification", href="/apps/linear-classification", style = {'font-size': '16px'}),
-                    dbc.DropdownMenuItem("Non Linear Classification", href="/apps/non-linear-classification", style = {'font-size': '16px'}),
+                    dbc.DropdownMenuItem("Linear Classification", href="/apps/linear-classification", id = "linear-classification", style = {'font-size': '16px'}),
+                    dbc.DropdownMenuItem("Non Linear Classification", href="/apps/non-linear-classification", id = "non-linear-classification", style = {'font-size': '16px'}),
                 ],
                 nav=True,
                 in_navbar=True,
@@ -23,3 +24,11 @@ def navbar(page_name: str):
         brand_style = {'font-size': '16px'}
     )
     return nav
+
+def selected_file(file: str):
+    if file is None:
+        return None
+    return html.Div([
+        html.H2(children = "Selected File: " + file,
+            style = {'margin': '10px', 'font-size': '16px'}),
+            html.Br()])

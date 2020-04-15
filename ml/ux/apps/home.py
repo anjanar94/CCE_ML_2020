@@ -4,8 +4,10 @@ import dash_html_components as html
 from dash.dependencies import Input, Output
 
 from ml.ux.app import app
+from ml.ux.app import db
 from ml.ux.apps import common
 from ml.framework.file_utils import FileUtils
+from ml.framework.data_utils import DataUtils
 
 home_layout = [
     common.navbar("Home"),
@@ -43,13 +45,10 @@ home_layout = [
             html.Br(),
         ],
         style = {'margin': '10px', 'width': '50%'}),
-        html.Div([
-        ],
-        id = "display-file")
+        html.Div(id = "display-file")
 ]
 
 layout = html.Div(home_layout)
-
 
 @app.callback(
     Output("selected-file", "options"),
@@ -75,9 +74,26 @@ def upload_data(contents, filename):
 )
 def display_data(value):
     """Displaying the head for the selected file."""
-    print(value)
-    if value is None:
+    db_value = db["file"]
+    if value is None and db_value is None:
         return ""
+    elif value is None and not db_value is None:
+        value = db_value
+    db["file"] = value
+    format = FileUtils.file_format(value)
+    if format == 'csv' or format == 'txt':
+        head = DataUtils.read_text_head('raw', value)
+        table_col = [html.Col(style = {'width':"10%"}), html.Col(style = {'width':"90%"})]
+        table_header = [html.Thead(html.Tr([html.Th("Row No"), html.Th("Data")]))]
+        rows = []
+        for i in range(len(head)):
+            row = html.Tr([html.Td(i+1), html.Td(head[i])])
+            rows.append(row)
+        table_body = [html.Tbody(rows)]
+        table = dbc.Table(table_col+ table_header + table_body, bordered=True,
+        style = {'margin': '10px', 'font-size':'16px', 'padding': '20px'})
+        return [common.selected_file(value), table]
+    elif format == 'jpeg' or format == 'jpg' or format == 'gif':
+        return [common.selected_file(value)]
     else:
-        
-        return "Head"
+        return "Format Not Supported!!"
