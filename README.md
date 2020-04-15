@@ -5,6 +5,7 @@ ML tool to solve user problems as per contents covered in IISc, Bangalore CCE ML
 ## Setup
 
 pip3 install -r requirements.txt
+
 pip3 freeze
 
 ## Run the application
