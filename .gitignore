@@ -107,3 +107,4 @@ venv.bak/
 ###### Custom Git Ignore
 dir/
 .DS_Store
+data/raw/
