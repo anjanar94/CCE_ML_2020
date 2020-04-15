@@ -4,10 +4,10 @@ import dash_html_components as html
 from dash.dependencies import Input, Output
 
 from ml.ux.app import app
-from ml.ux.app import db
 from ml.ux.apps import common
 from ml.framework.file_utils import FileUtils
 from ml.framework.data_utils import DataUtils
+from ml.framework.database import db
 
 home_layout = [
     common.navbar("Home"),
@@ -74,12 +74,12 @@ def upload_data(contents, filename):
 )
 def display_data(value):
     """Displaying the head for the selected file."""
-    db_value = db["file"]
+    db_value = db.get("file")
     if value is None and db_value is None:
         return ""
     elif value is None and not db_value is None:
         value = db_value
-    db["file"] = value
+    div = None
     format = FileUtils.file_format(value)
     if format == 'csv' or format == 'txt':
         head = DataUtils.read_text_head('raw', value)
@@ -92,8 +92,10 @@ def display_data(value):
         table_body = [html.Tbody(rows)]
         table = dbc.Table(table_col+ table_header + table_body, bordered=True,
         style = {'margin': '10px', 'font-size':'16px', 'padding': '20px'})
-        return [common.selected_file(value), table]
+        div =  [common.selected_file(value), table]
     elif format == 'jpeg' or format == 'jpg' or format == 'gif':
-        return [common.selected_file(value)]
+        div =  [common.selected_file(value)]
     else:
-        return "Format Not Supported!!"
+        div = "Format Not Supported!!"
+    db.put("file", value)
+    return div

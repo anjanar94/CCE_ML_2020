@@ -3,8 +3,8 @@ import dash_html_components as html
 from dash.dependencies import Input, Output
 
 from ml.ux.app import app
-from ml.ux.app import db
 from ml.ux.apps import common
+from ml.framework.database import db
 
 layout = html.Div([
     common.navbar("Classification - Linearly Separable"),
@@ -17,4 +17,4 @@ layout = html.Div([
     [Input('linear-classification', 'href')]
 )
 def selected_file(href):
-    return common.selected_file(db["file"])
+    return common.selected_file(db.get("file"))
