@@ -17,4 +17,6 @@ layout = html.Div([
     [Input('non-linear-classification', 'href')]
 )
 def selected_file(href):
-    return common.selected_file(db.get("file"))
+    file = db.get("file")
+    format = db.get("format")
+    return common.msg("Selected File: " + file + " Selected Format: " + format)

@@ -7,6 +7,7 @@ def navbar(page_name: str):
             dbc.NavItem(dbc.NavLink(page_name)),
             dbc.DropdownMenu(
                 children=[
+                    #dbc.DropdownMenuItem("Home", href="/home", id = "home-refresh", style = {'font-size': '16px'}),
                     dbc.DropdownMenuItem("Linear Classification", href="/apps/linear-classification", id = "linear-classification", style = {'font-size': '16px'}),
                     dbc.DropdownMenuItem("Non Linear Classification", href="/apps/non-linear-classification", id = "non-linear-classification", style = {'font-size': '16px'}),
                 ],
@@ -25,10 +26,20 @@ def navbar(page_name: str):
     )
     return nav
 
-def selected_file(file: str):
-    if file is None:
+table_style = {'margin': '10px', 'font-size':'16px', 'padding': '20px'}
+
+def msg(msg: str):
+    if msg is None:
         return None
     return html.Div([
-        html.H2(children = "Selected File: " + file,
+        html.H2(children = msg,
             style = {'margin': '10px', 'font-size': '16px'}),
+            html.Br()])
+
+def error_msg(msg: str):
+    if msg is None:
+        return None
+    return html.Div([
+        html.H2(children = msg,
+            style = {'margin': '10px', 'font-size': '16px', 'color': 'red'}),
             html.Br()])

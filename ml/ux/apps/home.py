@@ -9,7 +9,7 @@ from ml.framework.file_utils import FileUtils
 from ml.framework.data_utils import DataUtils
 from ml.framework.database import db
 
-home_layout = [
+layout = html.Div([
     common.navbar("Home"),
     html.Br(),
     html.H3(
@@ -39,16 +39,16 @@ home_layout = [
                 id = 'selected-file',
                 options=[{'label':file, 'value':file} for file in FileUtils.files('raw')],
                 value=None,
-                multi=False,
-                #style = {}
+                multi=False
             ),
             html.Br(),
         ],
         style = {'margin': '10px', 'width': '50%'}),
-        html.Div(id = "display-file")
-]
-
-layout = html.Div(home_layout)
+        html.Div([], id = "display-file"),
+        html.Div([], id = "file-properties"),
+        html.Div([], id = "file-separator-do-nothing"),
+        html.Div([], id = "file-header-do-nothing")
+])
 
 @app.callback(
     Output("selected-file", "options"),
@@ -79,10 +79,10 @@ def display_data(value):
         return ""
     elif value is None and not db_value is None:
         value = db_value
-    div = None
     format = FileUtils.file_format(value)
     if format == 'csv' or format == 'txt':
-        head = DataUtils.read_text_head('raw', value)
+        path = FileUtils.path('raw', value)
+        head = DataUtils.read_text_head(path)
         table_col = [html.Col(style = {'width':"10%"}), html.Col(style = {'width':"90%"})]
         table_header = [html.Thead(html.Tr([html.Th("Row No"), html.Th("Data")]))]
         rows = []
@@ -90,12 +90,91 @@ def display_data(value):
             row = html.Tr([html.Td(i+1), html.Td(head[i])])
             rows.append(row)
         table_body = [html.Tbody(rows)]
-        table = dbc.Table(table_col+ table_header + table_body, bordered=True,
-        style = {'margin': '10px', 'font-size':'16px', 'padding': '20px'})
-        div =  [common.selected_file(value), table]
+        table = dbc.Table(table_col+ table_header + table_body, bordered=True, style = common.table_style)
+        div =  [common.msg("Selected File: " + value),
+                common.msg("Selected Format: " + format),
+                table,
+                html.Br(),
+                csv_properties_div]
     elif format == 'jpeg' or format == 'jpg' or format == 'gif':
-        div =  [common.selected_file(value)]
+        div =  [common.msg("Selected File: " + value),
+                common.msg("Selected Format: " + format)]
     else:
         div = "Format Not Supported!!"
     db.put("file", value)
+    db.put("format", format)
     return div
+
+csv_properties = dbc.Card([
+    dbc.FormGroup([
+        html.H2("Apply File Properties"),
+        dbc.Label("Header"),
+        dcc.Dropdown(
+            id="file-header",
+            options=[{'label':"True", 'value':1}, {"label": "False", "value": 0}],
+            value=None,
+            multi=False),
+        dbc.Label("Separator"),
+        dbc.Input(id="file-separator", placeholder="Separator", type="text", step=1),
+        html.Br(),
+        dbc.Button("Apply", color="primary", id = 'file-apply-properties'),
+        ],
+        style = {'padding': '10px'})
+    ])
+
+csv_properties_div = html.Div([
+    dbc.Row([
+        dbc.Col(csv_properties, md=4)
+    ],
+    align="center")
+],
+style = {'margin': '10px', 'font-size': '16px'})
+
+@app.callback(
+    Output("file-properties", "children"),
+    [Input('file-apply-properties', 'n_clicks')]
+)
+def apply_file_properties(n):
+    file = db.get("file")
+    format = db.get("format")
+    sep = db.get("file_separator")
+    header = db.get("file_header")
+    print(db.dict())
+    div = None
+    if format is None:
+        div = None
+    elif (format == 'csv' or format == 'txt') and header is None:
+        div= common.error_msg('Please Select Header!!')
+    elif format == 'csv' or format == 'txt':
+        if sep is None:
+            sep = ','
+            db.put("file_separator", sep)
+        path = FileUtils.path('raw', file)
+        df = DataUtils.read_csv(path, sep, header)
+        db.put("data", df)
+        msg = "Following Properties Applied. Separator=" + sep + " Header="+ str(header)
+        table = dbc.Table.from_dataframe(df.head(10), striped=True, bordered=True, hover=True, style = common.table_style)
+        div = [common.msg(msg), table]
+    return div
+
+
+@app.callback(
+    Output('file-separator-do-nothing' , "children"),
+    [Input('file-separator', 'value')]
+)
+def file_separator(value):
+    if not value is None:
+        db.put("file_separator", value)
+    return None
+
+@app.callback(
+    Output('file-header-do-nothing' , "children"),
+    [Input('file-header', 'value')]
+)
+def file_header_true(value):
+    print("c1")
+    if value == 1:
+        db.put("file_header", True)
+    elif value == 0:
+        db.put("file_header", False)
+    return None
