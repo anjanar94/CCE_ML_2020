@@ -25,5 +25,7 @@ class Database:
     def put(self, key: str, value):
         self.__db__[key] = value
 
+    def reset(self):
+        self.__db__ = {}
 
 db = Database()

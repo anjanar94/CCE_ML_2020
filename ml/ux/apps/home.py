@@ -79,6 +79,8 @@ def display_data(value):
         return ""
     elif value is None and not db_value is None:
         value = db_value
+    elif not value == db_value:
+        db.reset()
     format = FileUtils.file_format(value)
     if format == 'csv' or format == 'txt':
         path = FileUtils.path('raw', value)
@@ -139,7 +141,6 @@ def apply_file_properties(n):
     format = db.get("format")
     sep = db.get("file_separator")
     header = db.get("file_header")
-    print(db.dict())
     div = None
     if format is None:
         div = None
@@ -172,7 +173,6 @@ def file_separator(value):
     [Input('file-header', 'value')]
 )
 def file_header_true(value):
-    print("c1")
     if value == 1:
         db.put("file_header", True)
     elif value == 0:
