@@ -109,3 +109,4 @@ dir/
 .DS_Store
 .idea
 data/raw/
+data/clean/

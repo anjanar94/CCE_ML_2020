@@ -16,7 +16,7 @@ class DataUtils:
         return op
 
     @staticmethod
-    def read_csv(path: str, sep: str, header: bool):
+    def read_csv(path: str, sep: str = ',', header: bool = True):
         if header:
             df = pd.read_csv(path, sep = sep)
         else:

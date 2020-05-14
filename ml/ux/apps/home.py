@@ -60,13 +60,7 @@ def upload_data(contents, filename):
     if contents:
         for i in range(len(filename)):
             FileUtils.upload(filename[i], contents[i])
-    files = FileUtils.files('raw')
-    if len(files) == 0:
-        options=[{'label':'No files uploaded yet!', 'value':'None'}]
-        return options
-    else:
-        options=[{'label':file, 'value':file} for file in files]
-        return options
+    return common.get_options('raw')
 
 @app.callback(
     Output("display-file", "children"),
@@ -152,6 +146,9 @@ def apply_file_properties(n):
             db.put("file_separator", sep)
         path = FileUtils.path('raw', file)
         df = DataUtils.read_csv(path, sep, header)
+        ### Save Clean DataFrame ###
+        path = FileUtils.path('clean', file.split('.')[0])
+        df.to_csv(path, index=False)
         db.put("data", df)
         msg = "Following Properties Applied. Separator=" + sep + " Header="+ str(header)
         table = dbc.Table.from_dataframe(df.head(10), striped=True, bordered=True, hover=True, style = common.table_style)

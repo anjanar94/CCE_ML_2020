@@ -1,6 +1,8 @@
 import dash_bootstrap_components as dbc
 import dash_html_components as html
 
+from ml.framework.file_utils import FileUtils
+
 def navbar(page_name: str):
     nav = dbc.NavbarSimple(
         children=[
@@ -43,3 +45,18 @@ def error_msg(msg: str):
         html.H2(children = msg,
             style = {'margin': '10px', 'font-size': '16px', 'color': 'red'}),
             html.Br()])
+
+def success_msg(msg: str):
+    if msg is None:
+        return None
+    return html.Div([
+        html.H2(children = msg,
+            style = {'margin': '10px', 'font-size': '16px', 'color': 'green'}),
+            html.Br()])
+
+def get_options(dir: str):
+    files = FileUtils.files(dir)
+    if len(files) == 0:
+        return [{'label':'No files yet!', 'value':'None'}]
+    else:
+        return [{'label':file, 'value':file} for file in files]
