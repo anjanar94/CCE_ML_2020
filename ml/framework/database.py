@@ -28,4 +28,11 @@ class Database:
     def reset(self):
         self.__db__ = {}
 
+    def clear(self, prefix: str):
+        clone_db = {}
+        for key, value in self.__db__.items():
+            if not key.startswith(prefix):
+                clone_db[key] = value
+        self.__db__ = clone_db
+
 db = Database()

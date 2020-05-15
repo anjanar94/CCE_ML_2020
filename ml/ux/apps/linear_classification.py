@@ -21,7 +21,8 @@ layout = html.Div([
     html.Br(),
     html.Div([
         html.H2("Load and Select a file from all the cleaned files:"),
-        dbc.Button("Load Cleaned File", color="primary", id = 'cl-load-cleaned-files')
+        dbc.Button("Load Cleaned File", color="primary", id = 'cl-load-cleaned-files', className="mr-2", style={'display': 'inline-block'}),
+        dbc.Button("Clear", color="secondary", id = 'cl-clear-db', className="mr-2", style={'display': 'inline-block'})
     ],style = {'margin': '10px'}),
     html.Div([
     dcc.Dropdown(
@@ -31,6 +32,7 @@ layout = html.Div([
         multi = False
     )],
     style = {'margin': '10px', 'width': '50%'}),
+    html.Div([], id = "cl-clear-db-do-nothing"),
     html.Div([],id = "linear-classification-selected-scatter-plot")
 ])
 
@@ -40,6 +42,13 @@ layout = html.Div([
 )
 def selected_file(n_clicks):
     return common.get_options('clean')
+
+@app.callback(
+    Output("cl-clear-db-do-nothing", "options"),
+    [Input('cl-clear-db', 'n_clicks')]
+)
+def selected_file(n_clicks):
+    return db.clear('cl.')
 
 @app.callback(
     Output("linear-classification-selected-scatter-plot", "children"),
@@ -115,9 +124,9 @@ def cl_display_selected_file_scatter_plot(value):
 )
 def cl_scatter_plot(n):
     df = db.get("cl.data")
-    clazz_col = db.get("cl_class")
-    x_col = db.get("cl_x_axis")
-    y_col = db.get("cl_y_axis")
+    clazz_col = db.get("cl.class")
+    x_col = db.get("cl.x_axis")
+    y_col = db.get("cl.y_axis")
     if clazz_col is None or x_col is None or y_col is None:
         return None
     graph = dcc.Graph(
@@ -155,7 +164,7 @@ def cl_scatter_plot(n):
 )
 def cl_class(value):
     if not value is None:
-        db.put("cl_class", value)
+        db.put("cl.class", value)
     return None
 
 @app.callback(
@@ -164,7 +173,7 @@ def cl_class(value):
 )
 def cl_x_axis(value):
     if not value is None:
-        db.put("cl_x_axis", value)
+        db.put("cl.x_axis", value)
     return None
 
 @app.callback(
@@ -173,7 +182,7 @@ def cl_x_axis(value):
 )
 def cl_y_axis(value):
     if not value is None:
-        db.put("cl_y_axis", value)
+        db.put("cl.y_axis", value)
     return None
 
 def get_cl_model_properties_div(df):
