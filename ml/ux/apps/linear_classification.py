@@ -314,6 +314,8 @@ def cl_model_train(n_clicks):
             instanceOfLR, summary = linearClassifier(train_df, test_df, len(var), lr, epoch)
             summary['Features'] = str(var)
             summary_df = pd.DataFrame(summary.items(), columns=['Parameters', 'Value'])
+            db.put('cl.data_train', train_df)
+            db.put('cl.data_test', test_df)
             db.put('cl.model_summary', summary)
             db.put('cl.model_instance', instanceOfLR)
         except Exception as e:
@@ -329,7 +331,8 @@ def cl_model_train(n_clicks):
             dbc.Input(id="cl-prediction-data", placeholder="f1,f2,f3,f4...", type="text"),
             html.Br(),
             dbc.Button("Predict", color="primary", id = 'cl-predict'),
-            html.Div([], id = "cl-prediction")
+            html.Div([], id = "cl-prediction"),
+            html.Div([],id = "cl-predicted-scatter-plot")
         ])
     else:
         div = common.error_msg('Select Proper Model Parameters!!')
@@ -345,7 +348,8 @@ def cl_model_prediction_data(value):
     return None
 
 @app.callback(
-    Output('cl-prediction' , "children"),
+    [Output('cl-prediction' , "children"),
+    Output('cl-predicted-scatter-plot' , "children")],
     [Input('cl-predict', 'n_clicks')]
 )
 def cl_model_predict(n_clicks):
@@ -354,20 +358,120 @@ def cl_model_predict(n_clicks):
     lr_instance = db.get('cl.model_instance')
     n_var = summary['Total Number of Features in Dataset']
     if predict_data is None:
-        return ""
+        return ("" , "")
     if len(predict_data.split(',')) != n_var:
-        return common.error_msg('Enter Valid Prediction Data!!')
+        return (common.error_msg('Enter Valid Prediction Data!!'), "")
     try:
-        predict_data = predict_data.split(',')
-        feature_vector = []
-        for d in predict_data:
-            feature_vector.append(float(d))
+        feature_vector = get_predict_data_list(predict_data)
         feature_vector = np.array(feature_vector)
         prediction = lr_instance.predict(feature_vector)
+        db.put('cl.prediction', prediction)
     except Exception as e:
-        return common.error_msg("Exception during prediction: " + str(e))
+        return (common.error_msg("Exception during prediction: " + str(e)), "")
+    df = db.get('cl.data_train')
+    df = df.iloc[:, :-1]
+    div = html.Div([
+        html.Div([html.H2("Predicted & Training Data Scatter Plot")], style={'width': '100%', 'display': 'flex', 'align-items': 'center', 'justify-content': 'center'}),
+        dbc.Row([
+            dbc.Col([
+                dbc.Label("Select X Axis"),
+                dcc.Dropdown(
+                    id = 'cl-x-axis-predict',
+                    options=[{'label':col, 'value':col} for col in [*df]],
+                    value=None,
+                    multi=False
+                ),
+                html.Br(),
+                dbc.Label("Select Y Axis"),
+                dcc.Dropdown(
+                    id = 'cl-y-axis-predict',
+                    options=[{'label':col, 'value':col} for col in [*df]],
+                    value=None,
+                    multi=False
+                ),
+                html.Br(),
+                dbc.Button("Plot", color="primary", id = 'cl-predict-scatter-plot-button'),
+                html.Div([], id = "cl-x-axis-predict-do-nothing"),
+                html.Div([], id = "cl-y-axis-predict-do-nothing")
+            ], md=2,
+            style = {'margin': '10px', 'font-size': '16px'}),
+            dbc.Col([], md=9, id="cl-scatter-plot-predict")
+        ]),
 
-    return common.success_msg('Predicted/Classified Class = ' + prediction)
+    ])
+    return (common.success_msg('Predicted/Classified Class = ' + prediction), div)
+
+@app.callback(
+    Output('cl-x-axis-predict-do-nothing' , "children"),
+    [Input('cl-x-axis-predict', 'value')]
+)
+def cl_x_axis(value):
+    if not value is None:
+        db.put("cl.x_axis_predict", value)
+    return None
+
+@app.callback(
+    Output('cl-y-axis-predict-do-nothing' , "children"),
+    [Input('cl-y-axis-predict', 'value')]
+)
+def cl_y_axis(value):
+    if not value is None:
+        db.put("cl.y_axis_predict", value)
+    return None
+
+@app.callback(
+    Output("cl-scatter-plot-predict", "children"),
+    [Input('cl-predict-scatter-plot-button', 'n_clicks')]
+)
+def cl_scatter_plot(n):
+    df = db.get("cl.data_train")
+    clazz_col = db.get('cl.model_class')
+    x_col = db.get("cl.x_axis_predict")
+    y_col = db.get("cl.y_axis_predict")
+    predict_data = db.get("cl.model_prediction_data")
+    prediction = db.get('cl.prediction')
+
+    feature_vector = get_predict_data_list(predict_data)
+    feature_vector.append('Predicted-'+prediction)
+    df.loc[len(df)] = feature_vector
+
+    if clazz_col is None or x_col is None or y_col is None:
+        return None
+    graph = dcc.Graph(
+        id='cl-x-vs-y-predict',
+        figure={
+            'data': [
+                go.Scatter(
+                    x=df[df[clazz_col] == clazz][x_col],
+                    y=df[df[clazz_col] == clazz][y_col],
+                    text=df[df[clazz_col] == clazz][clazz_col],
+                    mode='markers',
+                    opacity=0.8,
+                    marker={
+                        'size': 15,
+                        'line': {'width': 0.5, 'color': 'white'}
+                    },
+                    name=clazz
+                ) for clazz in df[clazz_col].unique()
+            ],
+            'layout': dict(
+                #title='Scatter Plot',
+                xaxis={'title': x_col},
+                yaxis={'title': y_col},
+                margin={'l': 40, 'b': 40},
+                legend={'x': 0, 'y': 1},
+                hovermode='closest'
+            )
+        }
+    )
+    return graph
+
+def get_predict_data_list(predict_data: str) -> []:
+    predict_data = predict_data.split(',')
+    feature_vector = []
+    for d in predict_data:
+        feature_vector.append(float(d))
+    return feature_vector
 
 def get_distinct_count_df(df, c, col):
     classes = df[c].unique()
