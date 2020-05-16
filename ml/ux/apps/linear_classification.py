@@ -318,6 +318,7 @@ def cl_model_train(n_clicks):
             db.put('cl.data_test', test_df)
             db.put('cl.model_summary', summary)
             db.put('cl.model_instance', instanceOfLR)
+            confusion_df = get_confusion_matrix(test_df, c, var, instanceOfLR)
         except Exception as e:
             return common.error_msg("Exception during training model: " + str(e))
 
@@ -326,9 +327,11 @@ def cl_model_train(n_clicks):
             dbc.Table.from_dataframe(distinct_count_df, striped=True, bordered=True, hover=True, style = common.table_style),
             html.H2('Model Parameters & Summary:'),
             dbc.Table.from_dataframe(summary_df, striped=True, bordered=True, hover=True, style = common.table_style),
+            html.H2('Confusion Matrix (Precision & Recall):'),
+            dbc.Table.from_dataframe(confusion_df, striped=True, bordered=True, hover=True, style = common.table_style),
             html.H2('Prediction/Classification:'),
-            dbc.Label('Features to be Predicted (Comma separated)'),
-            dbc.Input(id="cl-prediction-data", placeholder="f1,f2,f3,f4...", type="text"),
+            html.P('Features to be Predicted (comma separated): ' + ','.join(var), style = {'font-size': '16px'}),
+            dbc.Input(id="cl-prediction-data", placeholder=','.join(var), type="text"),
             html.Br(),
             dbc.Button("Predict", color="primary", id = 'cl-predict'),
             html.Div([], id = "cl-prediction"),
@@ -371,7 +374,7 @@ def cl_model_predict(n_clicks):
     df = db.get('cl.data_train')
     df = df.iloc[:, :-1]
     div = html.Div([
-        html.Div([html.H2("Predicted & Training Data Scatter Plot")], style={'width': '100%', 'display': 'flex', 'align-items': 'center', 'justify-content': 'center'}),
+        html.Div([html.H2("Predicted & Testing Data Scatter Plot")], style={'width': '100%', 'display': 'flex', 'align-items': 'center', 'justify-content': 'center'}),
         dbc.Row([
             dbc.Col([
                 dbc.Label("Select X Axis"),
@@ -424,7 +427,7 @@ def cl_y_axis(value):
     [Input('cl-predict-scatter-plot-button', 'n_clicks')]
 )
 def cl_scatter_plot(n):
-    df = db.get("cl.data_train")
+    df = db.get("cl.data_test")
     clazz_col = db.get('cl.model_class')
     x_col = db.get("cl.x_axis_predict")
     y_col = db.get("cl.y_axis_predict")
@@ -485,3 +488,26 @@ def get_distinct_count_df(df, c, col):
     distinct_count['Gross Total = '] = total
     distinct_count = pd.DataFrame(distinct_count.items(), columns=['Class', col])
     return distinct_count
+
+def get_confusion_matrix(df, c, var, model):
+    classes = df[c].unique()
+    d = {}
+    for clazz in classes:
+        d[clazz] = {'t_rel':0, 't_ret':0, 'rr':0}
+    for index, row in df.iterrows():
+        feature_vector = []
+        for v in var:
+            feature_vector.append(row[v])
+        feature_vector = np.array(feature_vector)
+        clazz = row[c]
+        prediction = model.predict(feature_vector)
+        d[clazz]['t_rel'] = d[clazz]['t_rel'] + 1
+        d[prediction]['t_ret'] = d[prediction]['t_ret'] + 1
+        if clazz == prediction:
+            d[clazz]['rr'] = d[clazz]['rr'] + 1
+    df = pd.DataFrame(columns=['Class', 'Total Retrieved Records', 'Total Relevant Records', 'Retrieved & Relevant', 'Precision', 'Recall'])
+    i = 0
+    for k, v in d.items():
+        df.loc[i] = [k, v['t_ret'],v['t_rel'], v['rr'], round(v['rr']/v['t_ret'], 4), round(v['rr']/v['t_rel'], 4)]
+        i = i+1
+    return df
