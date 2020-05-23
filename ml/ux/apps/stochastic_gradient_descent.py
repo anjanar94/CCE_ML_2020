@@ -337,6 +337,7 @@ def sgd_model_train(n_clicks):
             summary['Total Number of Features in Dataset'] = len(var)
             summary['No of Hidden Layer'] = 1
             summary['No of Neuron in each Hidden Layer'] = no_of_neuron
+            summary['Activation Function'] = 'Sigmoid'
             summary['Learning rate'] = lr
             summary['Epochs'] = epoch
             summary['Total Correct Prediction'] = 'TODO ##### '
