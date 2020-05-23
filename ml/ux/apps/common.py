@@ -12,6 +12,7 @@ def navbar(page_name: str):
                     #dbc.DropdownMenuItem("Home", href="/home", id = "home-refresh", style = {'font-size': '16px'}),
                     dbc.DropdownMenuItem("Linear Classification", href="/apps/linear-classification", id = "linear-classification", style = {'font-size': '16px'}),
                     dbc.DropdownMenuItem("Non Linear Classification", href="/apps/non-linear-classification", id = "non-linear-classification", style = {'font-size': '16px'}),
+                    dbc.DropdownMenuItem("Stochastic Gradient Descent", href="/apps/stochastic-gradient-descent", id = "stochastic-gradient-descent", style = {'font-size': '16px'}),
                 ],
                 nav=True,
                 in_navbar=True,

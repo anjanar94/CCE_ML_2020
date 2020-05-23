@@ -3,7 +3,7 @@ import dash_html_components as html
 from dash.dependencies import Input, Output
 
 from ml.ux.app import app
-from ml.ux.apps import home, linear_classification, non_linear_classification
+from ml.ux.apps import home, linear_classification, non_linear_classification, stochastic_gradient_descent
 
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
@@ -20,6 +20,8 @@ def display_page(pathname):
         return linear_classification.layout
     elif pathname == '/apps/non-linear-classification':
         return non_linear_classification.layout
+    elif pathname == '/apps/stochastic-gradient-descent':
+        return stochastic_gradient_descent.layout
     else:
         return '404'
 
