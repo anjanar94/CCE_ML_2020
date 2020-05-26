@@ -1,5 +1,7 @@
 import numpy
 import matplotlib.pyplot
+from skimage.color import rgb2gray
+from skimage.color import rgba2rgb
 
 class NeuralNetwork:
 
@@ -39,7 +41,7 @@ class NeuralNetwork:
 
 #******************************************************************************#
 #******************************************************************************#
-#Training the data   
+#Training the data
 input_nodes = 784
 hidden_nodes = 100
 output_nodes = 10
@@ -65,25 +67,19 @@ for e in range(epoch):
 #******************************************************************************#
 #******************************************************************************#
 # Testing our own handwriting
-from skimage.color import rgb2gray
-
 print("Enter the full path of the image file")
 file_path = input()
 original = matplotlib.pyplot.imread(file_path)
 # matplotlib.pyplot.imshow(original)
-grayscale = rgb2gray(original)
+#grayscale = rgb2gray(original)
+grayscale = rgb2gray(rgba2rgb(original))
 img_array = grayscale.reshape(784,)
 img_array = 1-img_array
 # matplotlib.pyplot.imshow(img_array.reshape((28,28)),cmap = "Greys",interpolation = "None")
-numpy.argmax(n.query(img_array))
+query = n.query(img_array)
+q = numpy.argmax(query)
+print(query)
+print(q)
 
 #******************************************************************************#
 #******************************************************************************#
-                
-
-
-
-
-
-
-
