@@ -12,23 +12,26 @@ from ml.neural_net.custom_neural_net import DigitNeuralNetI
 from ml.framework.file_utils import FileUtils
 
 
-class DigitNeuralNet1HiddenLayer(DigitNeuralNetI):
+class DigitNeuralNet2HiddenLayer(DigitNeuralNetI):
 
-    def __init__(self,inp_nodes,hid_nodes,out_nodes):
-        self.inodes = inp_nodes
-        self.hnodes = hid_nodes
-        self.onodes = out_nodes
+    def __init__(self,inputnodes, hiddennodes1, hiddennodes2, outputnodes):
+        self.inodes = inputnodes
+        self.hnodes1 = hiddennodes1
+        self.hnodes2 = hiddennodes2
+        self.onodes = outputnodes
         self.lr = 0.1
         self.epoch = 5
         self.activation_function = lambda x: 1/(1+pow(2.718,-x))
-        self.wih = numpy.random.rand(self.hnodes,self.inodes)-0.5
-        self.who = numpy.random.rand(self.onodes,self.hnodes)-0.5
+        self.wih = numpy.random.rand(self.hnodes1,self.inodes)-0.5
+        self.whh2 = numpy.random.rand(self.hnodes2,self.hnodes1)-0.5
+        self.who = numpy.random.rand(self.onodes,self.hnodes2)-0.5
 
         self.params = {}
-        self.params['Hidden Layer'] = 1
-        self.params['Total Layer'] = 3
+        self.params['Hidden Layer'] = 2
+        self.params['Total Layer'] = 4
         self.params['Input Nodes'] = self.inodes
-        self.params['Hidden Nodes'] = self.hnodes
+        self.params['Hidden Layer 1 Nodes'] = self.hnodes1
+        self.params['Hidden Layer 2 Nodes'] = self.hnodes2
         self.params['Output Nodes'] = self.onodes
         self.params['Learning Rate'] = self.lr
         self.params['Activation Function'] = 'Binary Sigmoid'
@@ -38,22 +41,27 @@ class DigitNeuralNet1HiddenLayer(DigitNeuralNetI):
     def __train(self,input_list,target_list):
         inputs = numpy.array(input_list,ndmin = 2).T
         targets = numpy.array(target_list, ndmin = 2).T
-        hidden_inputs = numpy.dot(self.wih,inputs)
-        hidden_outputs = self.activation_function(hidden_inputs)
-        final_inputs = numpy.dot(self.who,hidden_outputs)
+        hidden_inputs1 = numpy.dot(self.wih,inputs)
+        hidden_outputs1 = self.activation_function(hidden_inputs1)
+        hidden_inputs2 = numpy.dot(self.whh2,hidden_outputs1)
+        hidden_outputs2 = self.activation_function(hidden_inputs2)
+        final_inputs = numpy.dot(self.who,hidden_outputs2)
         final_outputs = self.activation_function(final_inputs)
         output_errors = targets - final_outputs
-        hidden_errors = numpy.dot(self.who.T,output_errors)
-
-        self.who += self.lr * numpy.dot((output_errors*final_outputs*(1-final_outputs)),numpy.transpose(hidden_outputs))
-        self.wih += self.lr * numpy.dot((hidden_errors*hidden_outputs*(1-hidden_outputs)),numpy.transpose(inputs))
+        hidden_errors2 = numpy.dot(self.who.T,output_errors)
+        hidden_errors1 = numpy.dot(self.whh2.T,hidden_errors2)
+        self.who += self.lr * numpy.dot((output_errors*final_outputs*(1-final_outputs)),numpy.transpose(hidden_outputs2))
+        self.whh2 += self.lr * numpy.dot((hidden_errors2*hidden_outputs2*(1-hidden_outputs2)),numpy.transpose(hidden_outputs1))
+        self.wih += self.lr * numpy.dot((hidden_errors1*hidden_outputs1*(1-hidden_outputs1)),numpy.transpose(inputs))
         pass
 
     def __query(self,input_list):
         inputs = numpy.array(input_list,ndmin = 2).T
-        hidden_inputs = numpy.dot(self.wih,inputs)
-        hidden_outputs = self.activation_function(hidden_inputs)
-        final_inputs = numpy.dot(self.who,hidden_outputs)
+        hidden_inputs1 = numpy.dot(self.wih,inputs)
+        hidden_outputs1 = self.activation_function(hidden_inputs1)
+        hidden_inputs2 = numpy.dot(self.whh2,hidden_outputs1)
+        hidden_outputs2 = self.activation_function(hidden_inputs2)
+        final_inputs = numpy.dot(self.who,hidden_outputs2)
         final_outputs = self.activation_function(final_inputs)
 
         return final_outputs
@@ -76,9 +84,9 @@ class DigitNeuralNet1HiddenLayer(DigitNeuralNetI):
             for records in training_data_list:
                 all_values = records.split(',')
                 inputs = (numpy.asfarray(all_values[1:])/255 * 0.99) + 0.01
-                targets = numpy.zeros(self.onodes)+0.01
+                targets = numpy.zeros(output_nodes)+0.01
                 targets[int(all_values[0])] = 0.99
-                self.__train(inputs, targets)
+                n.train(inputs,targets)
         pass
 
     def test(self, path: str) -> ({}, float):
@@ -123,7 +131,7 @@ class DigitNeuralNet1HiddenLayer(DigitNeuralNetI):
         return max
 
     def load(self):
-        dir = os.path.join('nets', 'digit_1_hidden_layer')
+        dir = os.path.join('nets', 'digit_2_hidden_layer')
         params_file_path =  FileUtils.path(dir, 'params.json')
         wih_file_path =  FileUtils.path(dir, 'wih.csv')
         who_file_path =  FileUtils.path(dir, 'who.csv')
@@ -135,7 +143,7 @@ class DigitNeuralNet1HiddenLayer(DigitNeuralNetI):
         pass
 
     def save(self):
-        dir = os.path.join('nets', 'digit_1_hidden_layer')
+        dir = os.path.join('nets', 'digit_2_hidden_layer')
         FileUtils.mkdir(dir)
         params_file_path =  FileUtils.path(dir, 'params.json')
         wih_file_path =  FileUtils.path(dir, 'wih.csv')

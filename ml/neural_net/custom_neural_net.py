@@ -1,3 +1,4 @@
+## API/Interface for the Neural Network ##
 class DigitNeuralNetI:
 
     ### Train the Neural Net ###

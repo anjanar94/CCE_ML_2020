@@ -1,0 +1,1 @@
+{"Hidden Layer": 2, "Total Layer": 4, "Input Nodes": 784, "Hidden Layer 1 Nodes": 100, "Hidden Layer 2 Nodes": 50, "Output Nodes": 10, "Learning Rate": 0.1, "Activation Function": "Binary Sigmoid", "Epoch": 5}
