@@ -81,8 +81,36 @@ class DigitNeuralNet1HiddenLayer(DigitNeuralNetI):
                 self.__train(inputs, targets)
         pass
 
-    def test(self, path: str):
-        pass
+    def test(self, path: str) -> ({}, float):
+        d = {}
+        total = []
+        for clazz in range(10):
+            d[clazz] = {'t_rel':0, 't_ret':0, 'rr':0}
+
+        test_data_file = open(path,"r")
+        test_data_list = test_data_file.readlines()
+        test_data_file.close()
+
+        for record in test_data_list:
+            all_values = record.split(',')
+            inputs = (numpy.asfarray(all_values[1:])/255*0.99)+0.01
+            clazz = int(all_values[0])
+            outputs = self.__query(inputs)
+            prediction = numpy.argmax(outputs)
+
+            d[clazz]['t_rel'] = d[clazz]['t_rel'] + 1
+            d[prediction]['t_ret'] = d[prediction]['t_ret'] + 1
+            if clazz == prediction:
+                d[clazz]['rr'] = d[clazz]['rr'] + 1
+                total.append(1)
+            else:
+                total.append(0)
+
+        result_array = numpy.asarray(total)
+        accuracy = (result_array.sum()/result_array.size)*100
+        self.params['accuracy'] = accuracy
+        print("Accuracy = ",result_array.sum()/result_array.size*100,"%",sep='')
+        return (d, accuracy)
 
     def predict(self, img_path: str) -> int:
         original = io.imread(img_path)

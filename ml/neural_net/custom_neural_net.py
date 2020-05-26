@@ -5,7 +5,7 @@ class DigitNeuralNetI:
         pass
 
     ### Test the trained Neural Net ###
-    def test(self, path: str):
+    def test(self, path: str) -> ({}, float):
         pass
 
     def predict(self, img_path: str) -> int:
