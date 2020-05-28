@@ -76,14 +76,8 @@ def nn_select_neural_network(value):
         i = i+1
 
     div = html.Div([
-        html.H2('Selected Neural Netwok: '+ value),
+        html.H2(value + ' Digit Recognition Neural Network'),
         html.Br(),
-        html.H2('Class Grouping in Data:'),
-        dbc.Table.from_dataframe(distinct_count_df, striped=True, bordered=True, hover=True, style = common.table_style),
-        html.H2('Model Parameters & Summary:'),
-        dbc.Table.from_dataframe(summary_df, striped=True, bordered=True, hover=True, style = common.table_style),
-        html.H2('Confusion Matrix (Precision & Recall):'),
-        dbc.Table.from_dataframe(confusion_df, striped=True, bordered=True, hover=True, style = common.table_style),
         html.H2('Image Recognition/Classification:'),
         html.Div([
             dcc.Dropdown(
@@ -91,8 +85,21 @@ def nn_select_neural_network(value):
             options=[{'label':file, 'value':file} for file in FileUtils.files('images')],
             value = None,
             multi = False
-        )],style = {'margin': '10px', 'width': '50%'}),
-        html.Div([],id = "nn-selected-image")
+        )],style = {'width': '50%'}),
+        html.Div([],id = "nn-selected-image"),
+        html.Br(),
+        html.Hr(),
+        html.H2('Class Grouping in Data:'),
+        dbc.Table.from_dataframe(distinct_count_df, striped=True, bordered=True, hover=True, style = common.table_style),
+        html.H2('Model Parameters & Summary:'),
+        dbc.Table.from_dataframe(summary_df, striped=True, bordered=True, hover=True, style = common.table_style),
+        html.H2('Confusion Matrix (Precision & Recall):'),
+        dbc.Table.from_dataframe(confusion_df, striped=True, bordered=True, hover=True, style = common.table_style),
+        html.Br(),
+        html.Br(),
+        html.Br(),
+        html.Br(),
+        html.Br()
         ],style = {'margin': '10px'})
     return div
 
