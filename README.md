@@ -11,3 +11,9 @@ pip3 freeze
 ## Run the application
 
 python3 app_main.py
+
+## Important Links
+
+MNIST Training set -http://pjreddie.com/media/files/mnist_train.csv
+
+MNIST Testing set - http://pjreddie.com/media/files/mnist_test.csv
