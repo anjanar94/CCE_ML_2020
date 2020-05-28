@@ -16,6 +16,10 @@ directory_to_extract_to = FileUtils.path('extra', '')
 with zipfile.ZipFile(train_data_zip_path, 'r') as zip_ref:
     zip_ref.extractall(directory_to_extract_to)
 
+test_data_zip_path = FileUtils.path('', 'mnist_test.csv.zip')
+with zipfile.ZipFile(test_data_zip_path, 'r') as zip_ref:
+    zip_ref.extractall(directory_to_extract_to)
+
 #Neural Net Training
 input_nodes = 784
 hidden_nodes = 100
@@ -24,7 +28,9 @@ learning_rate = 0.1
 epoch = 5
 
 train_data_path = FileUtils.path('extra', 'mnist_train.csv')
+test_data_path = FileUtils.path('extra', 'mnist_test.csv')
 
 net = DigitNeuralNet1HiddenLayer(input_nodes, hidden_nodes, output_nodes)
 net.train(train_data_path, epoch, learning_rate)
+net.test(test_data_path)
 net.save()

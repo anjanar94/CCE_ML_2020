@@ -23,5 +23,5 @@ class DigitNeuralNetI:
         pass
 
     ## Get Neural Network Parameters ##
-    def parameters() -> {}:
+    def parameters() -> ({}, {}):
         pass

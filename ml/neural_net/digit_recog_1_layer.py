@@ -32,7 +32,7 @@ class DigitNeuralNet1HiddenLayer(DigitNeuralNetI):
         self.params['Output Nodes'] = self.onodes
         self.params['Learning Rate'] = self.lr
         self.params['Activation Function'] = 'Binary Sigmoid'
-        print(self.params)
+        self.con_mat = {}
         pass
 
     def __train(self,input_list,target_list):
@@ -110,8 +110,9 @@ class DigitNeuralNet1HiddenLayer(DigitNeuralNetI):
         accuracy = (result_array.sum()/result_array.size)*100
         self.params['Total Test Data Points'] = len(total)
         self.params['Accuracy'] = accuracy
+        self.con_mat = d
         print("Accuracy = ",result_array.sum()/result_array.size*100,"%",sep='')
-        print("Confusion Matrix = ",d,sep='')
+        print("Confusion Matrix = ",self.con_mat,sep='')
         return (d, accuracy)
 
     def predict(self, img_path: str) -> int:
@@ -126,11 +127,16 @@ class DigitNeuralNet1HiddenLayer(DigitNeuralNetI):
     def load(self):
         dir = os.path.join('nets', 'digit_1_hidden_layer')
         params_file_path =  FileUtils.path(dir, 'params.json')
+        con_mat_file_path =  FileUtils.path(dir, 'con_mat.json')
         wih_file_path =  FileUtils.path(dir, 'wih.csv')
         who_file_path =  FileUtils.path(dir, 'who.csv')
-        out_file = open(params_file_path)
-        self.params = json.load(out_file)
-        out_file.close()
+
+        out_param_file = open(params_file_path)
+        self.params = json.load(out_param_file)
+        out_param_file.close()
+        out_con_file = open(con_mat_file_path, "w")
+        self.con_mat = json.load(out_con_file)
+        out_con_file.close()
         self.wih = loadtxt(wih_file_path, delimiter=',')
         self.who = loadtxt(who_file_path, delimiter=',')
         pass
@@ -139,15 +145,19 @@ class DigitNeuralNet1HiddenLayer(DigitNeuralNetI):
         dir = os.path.join('nets', 'digit_1_hidden_layer')
         FileUtils.mkdir(dir)
         params_file_path =  FileUtils.path(dir, 'params.json')
+        con_mat_file_path =  FileUtils.path(dir, 'con_mat.json')
         wih_file_path =  FileUtils.path(dir, 'wih.csv')
         who_file_path =  FileUtils.path(dir, 'who.csv')
 
-        out_file = open(params_file_path, "w")
-        json.dump(self.params, out_file)
-        out_file.close()
+        out_param_file = open(params_file_path, "w")
+        json.dump(self.params, out_param_file)
+        out_param_file.close()
+        out_con_file = open(con_mat_file_path, "w")
+        json.dump(self.con_mat, out_con_file)
+        out_con_file.close()
         savetxt(wih_file_path, self.wih, delimiter=',')
         savetxt(who_file_path, self.who, delimiter=',')
         pass
 
-    def parameters(self) -> {}:
-        return self.params
+    def parameters(self) -> ({}, {}):
+        return (self.params, self.con_mat)
