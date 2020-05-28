@@ -78,6 +78,7 @@ class DigitNeuralNet2HiddenLayer(DigitNeuralNetI):
         training_data_file = open(path,"r")
         training_data_list = training_data_file.readlines()
         training_data_file.close()
+        self.params['Total Train Data Points'] = len(training_data_list)
 
         for e in range(epoch):
             print('### Epoch = ' + str(e))

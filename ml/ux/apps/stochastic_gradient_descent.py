@@ -333,7 +333,7 @@ def sgd_model_train(n_clicks):
             ycap, loss_dict, cc_percentage, wc_percentage = ann_training(train_df[var], train_df[c], no_of_neuron, lr, epoch)
             summary = {}
             summary['Total Training Data'] = len(train_df)
-            summary['Total Testing Data'] = len(train_df)
+            summary['Total Testing Data'] = len(test_df)
             summary['Total Number of Features in Dataset'] = len(var)
             summary['No of Hidden Layer'] = 1
             summary['No of Neuron in each Hidden Layer'] = no_of_neuron
