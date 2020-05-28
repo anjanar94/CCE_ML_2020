@@ -117,7 +117,13 @@ class DigitNeuralNet1HiddenLayer(DigitNeuralNetI):
 
     def predict(self, img_path: str) -> int:
         original = io.imread(img_path)
-        grayscale = rgb2gray(original)
+        shape = str(original.shape).replace('(', '').replace(')', '')
+        dim = int(shape.split(',')[2].strip())
+        if dim > 3:
+            grayscale = rgb2gray(rgba2rgb(original))
+        else:
+            grayscale = rgb2gray(original)
+
         img_array = grayscale.reshape(784,)
         img_array = 1-img_array
         query = self.__query(img_array)
@@ -134,7 +140,7 @@ class DigitNeuralNet1HiddenLayer(DigitNeuralNetI):
         out_param_file = open(params_file_path)
         self.params = json.load(out_param_file)
         out_param_file.close()
-        out_con_file = open(con_mat_file_path, "w")
+        out_con_file = open(con_mat_file_path)
         self.con_mat = json.load(out_con_file)
         out_con_file.close()
         self.wih = loadtxt(wih_file_path, delimiter=',')

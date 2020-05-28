@@ -30,6 +30,7 @@ class TestDigitRecog1Layer(TestCase):
         print(params)
         print(confusion_matrix)
         assert accuray > 95
+        assert len(confusion_matrix) == 10
 
     def test_image_recog_two(self):
         img_path = FileUtils.path('images', 'two.png')
