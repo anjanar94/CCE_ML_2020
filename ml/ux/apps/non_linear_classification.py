@@ -19,4 +19,4 @@ layout = html.Div([
 def selected_file(href):
     file = db.get("file")
     format = db.get("format")
-    return common.msg("Selected File: " + file + " Selected Format: " + format)
+    return common.msg("Selected File: " + str(file) + " Selected Format: " + str(format))
