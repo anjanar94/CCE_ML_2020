@@ -84,9 +84,9 @@ class DigitNeuralNet2HiddenLayer(DigitNeuralNetI):
             for records in training_data_list:
                 all_values = records.split(',')
                 inputs = (numpy.asfarray(all_values[1:])/255 * 0.99) + 0.01
-                targets = numpy.zeros(output_nodes)+0.01
+                targets = numpy.zeros(self.onodes)+0.01
                 targets[int(all_values[0])] = 0.99
-                n.train(inputs,targets)
+                self.__train(inputs, targets)
         pass
 
     def test(self, path: str) -> ({}, float):
@@ -116,7 +116,8 @@ class DigitNeuralNet2HiddenLayer(DigitNeuralNetI):
 
         result_array = numpy.asarray(total)
         accuracy = (result_array.sum()/result_array.size)*100
-        self.params['accuracy'] = accuracy
+        self.params['Total Test Data Points'] = len(total)
+        self.params['Accuracy'] = accuracy
         print("Accuracy = ",result_array.sum()/result_array.size*100,"%",sep='')
         print("Confusion Matrix = ",d,sep='')
         return (d, accuracy)
@@ -134,11 +135,13 @@ class DigitNeuralNet2HiddenLayer(DigitNeuralNetI):
         dir = os.path.join('nets', 'digit_2_hidden_layer')
         params_file_path =  FileUtils.path(dir, 'params.json')
         wih_file_path =  FileUtils.path(dir, 'wih.csv')
+        whh_file_path =  FileUtils.path(dir, 'whh.csv')
         who_file_path =  FileUtils.path(dir, 'who.csv')
         out_file = open(params_file_path)
         self.params = json.load(out_file)
         out_file.close()
         self.wih = loadtxt(wih_file_path, delimiter=',')
+        self.whh2 = loadtxt(whh_file_path, delimiter=',')
         self.who = loadtxt(who_file_path, delimiter=',')
         pass
 
@@ -147,13 +150,16 @@ class DigitNeuralNet2HiddenLayer(DigitNeuralNetI):
         FileUtils.mkdir(dir)
         params_file_path =  FileUtils.path(dir, 'params.json')
         wih_file_path =  FileUtils.path(dir, 'wih.csv')
+        whh_file_path =  FileUtils.path(dir, 'whh.csv')
         who_file_path =  FileUtils.path(dir, 'who.csv')
 
         out_file = open(params_file_path, "w")
         json.dump(self.params, out_file)
         out_file.close()
         savetxt(wih_file_path, self.wih, delimiter=',')
+        savetxt(whh_file_path, self.whh2, delimiter=',')
         savetxt(who_file_path, self.who, delimiter=',')
+
         pass
 
     def parameters(self) -> {}:

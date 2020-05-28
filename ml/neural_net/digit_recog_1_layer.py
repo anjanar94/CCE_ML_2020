@@ -108,7 +108,8 @@ class DigitNeuralNet1HiddenLayer(DigitNeuralNetI):
 
         result_array = numpy.asarray(total)
         accuracy = (result_array.sum()/result_array.size)*100
-        self.params['accuracy'] = accuracy
+        self.params['Total Test Data Points'] = len(total)
+        self.params['Accuracy'] = accuracy
         print("Accuracy = ",result_array.sum()/result_array.size*100,"%",sep='')
         print("Confusion Matrix = ",d,sep='')
         return (d, accuracy)

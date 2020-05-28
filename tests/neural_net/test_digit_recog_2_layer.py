@@ -34,7 +34,7 @@ class TestDigitRecog2Layer(TestCase):
         net.load()
 
         confusion_matrix, accuray = net.test(test_data_path)
-        #self.assertEqual(accuray, 13.79)
+        self.assertEqual(accuray, 92.5)
 
     def test_image_recog_two(self):
         img_path = FileUtils.path('images', 'two.png')
@@ -42,7 +42,7 @@ class TestDigitRecog2Layer(TestCase):
         net = DigitNeuralNet2HiddenLayer(784, 100, 50, 10)
         net.load()
         q = net.predict(img_path)
-        #self.assertEqual(q, 5)
+        self.assertEqual(q, 2)
 
     def test_image_recog_four(self):
         img_path = FileUtils.path('images', 'four.png')
@@ -50,7 +50,7 @@ class TestDigitRecog2Layer(TestCase):
         net = DigitNeuralNet2HiddenLayer(784, 100, 50, 10)
         net.load()
         q = net.predict(img_path)
-        #self.assertEqual(q, 2)
+        self.assertEqual(q, 4)
 
     def test_image_recog_five(self):
         img_path = FileUtils.path('images', 'five.png')
@@ -58,7 +58,7 @@ class TestDigitRecog2Layer(TestCase):
         net = DigitNeuralNet2HiddenLayer(784, 100, 50, 10)
         net.load()
         q = net.predict(img_path)
-        #self.assertEqual(q, 5)
+        self.assertEqual(q, 5)
 
     def test_image_recog_eight(self):
         img_path = FileUtils.path('images', 'eight.png')
@@ -66,7 +66,7 @@ class TestDigitRecog2Layer(TestCase):
         net = DigitNeuralNet2HiddenLayer(784, 100, 50, 10)
         net.load()
         q = net.predict(img_path)
-        #self.assertEqual(q, 3)
+        self.assertEqual(q, 3)
 
 if __name__ == '__main__':
     unittest.main()
