@@ -53,8 +53,9 @@ def nn_select_neural_network(value):
     db.put('nn.net', net)
     net.load()
     params, confusion_matrix = net.parameters()
+    params['Accuracy'] = round(params['Accuracy'], 2)
+
     summary_df = pd.DataFrame(params.items(), columns=['Parameters', 'Value'])
-    summary_df.round(2)
 
     distinct_count_df = pd.DataFrame(columns=['Class', 'Total Count', 'Training Count', 'Testing Count'])
     distinct_count_df.loc[0] = ['0',6903, 5923, 980]
