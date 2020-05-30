@@ -354,7 +354,7 @@ def sgd_model_train(n_clicks):
             db.put('sgd.model', model)
             db.put('sgd.model_yu', yu)
 
-            #confusion_df = get_confusion_matrix(test_df, c, var, model, yu)
+            confusion_df = get_confusion_matrix(test_df, c, var, model, yu, reverse_quantized_classes)
         except Exception as e:
             return common.error_msg("Exception during training model: " + str(e))
 
@@ -370,9 +370,11 @@ def sgd_model_train(n_clicks):
             dbc.Table.from_dataframe(summary_df, striped=True, bordered=True, hover=True, style = common.table_style),
             html.Br(),
             dcc.Graph(id='sgd-convergence-plot', figure=convergence_fig),
-            #html.H2('Confusion Matrix (Precision & Recall):'),
-            #dbc.Table.from_dataframe(confusion_df, striped=True, bordered=True, hover=True, style = common.table_style),
-
+            html.H2('Confusion Matrix (Precision & Recall):'),
+            dbc.Table.from_dataframe(confusion_df, striped=True, bordered=True, hover=True, style = common.table_style),
+            html.Br(),
+            html.Br(),
+            html.Br(),
             #html.H2('Prediction/Classification:'),
             #html.P('Features to be Predicted (comma separated): ' + ','.join(var), style = {'font-size': '16px'}),
             #dbc.Input(id="sgd-prediction-data", placeholder=','.join(var), type="text"),
@@ -411,29 +413,27 @@ def get_distinct_count_df(df, c, col):
     distinct_count = pd.DataFrame(distinct_count.items(), columns=['Class', col])
     return distinct_count
 
-def get_confusion_matrix(df, c, var, model, yu):
-    print(df)
-    print(c)
-    print(var)
+def get_confusion_matrix(df, c, var, model, yu, reverse_quantized_classes):
     classes = df[c].unique()
+    i = 0
     d = {}
     for clazz in classes:
         clazz = str(int(clazz))
         d[clazz] = {'t_rel':0, 't_ret':0, 'rr':0}
     for index, row in df.iterrows():
         clazz = str(int(row[c]))
-        prediction = str(int(ann_predict(row[var], model, yu)))
-        print('Actual = '+ clazz)
-        print('Prediction = ' + prediction)
-        print(ann_predict(row[var], model, yu))
+        feature_vector = df[var].iloc[i:i+1]
+        i = i + 1
+        prediction = ann_predict(feature_vector, model, yu)
+        prediction = str(int(prediction))
         d[clazz]['t_rel'] = d[clazz]['t_rel'] + 1
         d[prediction]['t_ret'] = d[prediction]['t_ret'] + 1
         if clazz == prediction:
             d[clazz]['rr'] = d[clazz]['rr'] + 1
     df = pd.DataFrame(columns=['Class', 'Total Retrieved Records', 'Total Relevant Records', 'Retrieved & Relevant', 'Precision', 'Recall'])
     i = 0
-    print(d)
     for k, v in d.items():
-        df.loc[i] = [k, v['t_ret'],v['t_rel'], v['rr'], round(v['rr']/v['t_ret'], 4), round(v['rr']/v['t_rel'], 4)]
+        key = reverse_quantized_classes[int(k)]
+        df.loc[i] = [key, v['t_ret'],v['t_rel'], v['rr'], round(v['rr']/v['t_ret'], 4), round(v['rr']/v['t_rel'], 4)]
         i = i+1
     return df
