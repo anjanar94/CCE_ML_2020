@@ -1,0 +1,16 @@
+Outlook,Temp,Humidity,Windy,Play_Golf
+Rainy,Hot,High,False,0
+Rainy,Hot,High,True,0
+Rainy,Mild,High,False,0
+Rainy,Cool,Normal,False,1
+Rainy,Mild,Normal,True,1
+Overcast,Hot,High,False,1
+Overcast,Cool,Normal,True,1
+Overcast,Mild,High,True,1
+Overcast,Hot,Normal,False,1
+Sunny,Mild,Normal,False,1
+Sunny,Mild,High,False,1
+Sunny,Cool,Normal,False,1
+Sunny,Cool,Normal,True,0
+Sunny,Mild,High,True,0
+Sunny,Mild,High,True,1
