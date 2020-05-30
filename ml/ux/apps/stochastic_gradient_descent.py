@@ -14,6 +14,8 @@ from ml.framework.file_utils import FileUtils
 from ml.framework.data_utils import DataUtils
 
 from ml.stochastic_neural_net import ann_training
+from ml.stochastic_neural_net import ann_testing
+from ml.stochastic_neural_net import ann_predict
 
 layout = html.Div([
     common.navbar("Stochastic Gradient Descent"),
@@ -330,7 +332,9 @@ def sgd_model_train(n_clicks):
             distinct_count_df = distinct_count_df.join(distinct_count_df_test.set_index('Class'), on='Class')
             distinct_count_df['Class'] = distinct_count_df['Class'].map(reverse_quantized_classes)
 
-            ycap, loss_dict, cc_percentage, wc_percentage = ann_training(train_df[var], train_df[c], no_of_neuron, lr, epoch)
+            ycap, loss_dict, cc_percentage, wc_percentage, model, yu = ann_training(train_df[var], train_df[c], no_of_neuron, lr, epoch)
+            ycap, cc_percentage, wc_percentage = ann_testing(test_df[var], test_df[c], model, yu)
+
             summary = {}
             summary['Total Training Data'] = len(train_df)
             summary['Total Testing Data'] = len(test_df)
@@ -340,18 +344,17 @@ def sgd_model_train(n_clicks):
             summary['Activation Function'] = 'Sigmoid'
             summary['Learning rate'] = lr
             summary['Epochs'] = epoch
-            summary['Total Correct Prediction'] = 'TODO ##### '
-            summary['Total Incorrect Prediction'] = 'TODO ### '
-            summary['Model Accuracy'] = 'TODO #### '
+            summary['Model Accuracy'] = round(cc_percentage, 2)
             summary['Features'] = str(var)
             summary_df = pd.DataFrame(summary.items(), columns=['Parameters', 'Value'])
 
             db.put('sgd.data_train', train_df)
             db.put('sgd.data_test', test_df)
             db.put('sgd.quantized_classes', quantized_classes)
-            #db.put('sgd.model_summary', summary)
-            #db.put('sgd.model_instance', instanceOfLR)
-            #confusion_df = get_confusion_matrix(test_df, c, var, instanceOfLR)
+            db.put('sgd.model', model)
+            db.put('sgd.model_yu', yu)
+
+            #confusion_df = get_confusion_matrix(test_df, c, var, model, yu)
         except Exception as e:
             return common.error_msg("Exception during training model: " + str(e))
 
@@ -407,3 +410,30 @@ def get_distinct_count_df(df, c, col):
     distinct_count['Gross Total = '] = total
     distinct_count = pd.DataFrame(distinct_count.items(), columns=['Class', col])
     return distinct_count
+
+def get_confusion_matrix(df, c, var, model, yu):
+    print(df)
+    print(c)
+    print(var)
+    classes = df[c].unique()
+    d = {}
+    for clazz in classes:
+        clazz = str(int(clazz))
+        d[clazz] = {'t_rel':0, 't_ret':0, 'rr':0}
+    for index, row in df.iterrows():
+        clazz = str(int(row[c]))
+        prediction = str(int(ann_predict(row[var], model, yu)))
+        print('Actual = '+ clazz)
+        print('Prediction = ' + prediction)
+        print(ann_predict(row[var], model, yu))
+        d[clazz]['t_rel'] = d[clazz]['t_rel'] + 1
+        d[prediction]['t_ret'] = d[prediction]['t_ret'] + 1
+        if clazz == prediction:
+            d[clazz]['rr'] = d[clazz]['rr'] + 1
+    df = pd.DataFrame(columns=['Class', 'Total Retrieved Records', 'Total Relevant Records', 'Retrieved & Relevant', 'Precision', 'Recall'])
+    i = 0
+    print(d)
+    for k, v in d.items():
+        df.loc[i] = [k, v['t_ret'],v['t_rel'], v['rr'], round(v['rr']/v['t_ret'], 4), round(v['rr']/v['t_rel'], 4)]
+        i = i+1
+    return df

@@ -1,12 +1,11 @@
 """
-Created on 17May2020
+Created on 29May2020
 
 @author: Team-5 (Pls call Abhay Kumar, 9940084930 if any query)
 """
 import numpy as np
 import pandas as pd
 from random import random, seed, randrange
-import matplotlib.pyplot as plt
 
 ## Defining Artificial Neural Network Class for one hidden layer only
 
@@ -90,7 +89,7 @@ class ANN:
         for i in range(0, iter):
             yh, loss_sum = self.forward(Xa,yb)
             self.backward(Xa,yb)
-        return
+        return self.param
 
     def pred(self,x, y):
         comp = np.zeros((1,x.shape[1]))
@@ -115,7 +114,7 @@ def transform_Xy(x_df,y_df):
 def back_transform_y(y_pred, yu):
     ycap = []
     for i in y_pred.T:
-        index = np.where(i == 1)
+        index = np.where(i >= 0.8)
         if index[0].size == 0:
             index = 0
         else:
@@ -143,7 +142,7 @@ def ann_training(x_df,y_df, hidden_layer1, lr, no_of_epoch):
         for i in range(1,X.shape[1]):
             X1 = x_df.iloc[i:i+1].values.transpose()
             y1 = np.array(yc_df.iloc[i:i+1].values.transpose())
-            nn.sgd(X1, y1, iter=10)
+            model_param = nn.sgd(X1, y1, iter=10)
 
         if epoch % 10 == 0:
             ytemp, ls = nn.pred(X, y)
@@ -161,29 +160,41 @@ def ann_training(x_df,y_df, hidden_layer1, lr, no_of_epoch):
     wc = np.sum(y_df!=ycap)
     cc_percentage = cc*100.0/(cc+wc)
     wc_percentage = wc*100.0/(cc+wc)
+    print("Training Dataset")
     print("Percentage of correct classification: {:.2f}%".format(cc_percentage))
     print("Percentage of wrong classification: {:.2f}%".format(wc_percentage))
 
     loss_dict = {"Epoch_no": epoch_no, "Loss": loss}
 
-    #fig, ax = plt.subplots()
-    #ax.set(xlabel = 'Epoch',
-    #       ylabel = 'Loss Function',
-    #       title = 'Convergence Graph')
-    #ax.plot(epoch_no,loss,'-r')
-    #plt.show()
+    return ycap, loss_dict, cc_percentage, wc_percentage, model_param, yu
 
-    return ycap, loss_dict, cc_percentage, wc_percentage
+def Sigmoid(Z):
+        return 1/(1+np.exp(-Z))
 
-## Reading a dataset and calling the API
-#df = pd.read_csv('Iris.csv')
-#x_df = df[['SepalLengthCm', 'SepalWidthCm', 'PetalLengthCm', 'PetalWidthCm']]
-#y_df = df['class']
+## Function for predicting / forcasting for a X dataset
+def ann_predict(x_df, model_param, yu):
+    X = x_df.values.transpose()
+    Z1 = model_param['W1'].dot(X) + model_param['b1']
+    A1 = Sigmoid(Z1)
+    Z2 = model_param['W2'].dot(A1) + model_param['b2']
+    A2 = Sigmoid(Z2)
+    #print('A2', A2)
 
-# Hyperparameters
-hidden_layer1 = 15          # No of neuron in hidden layer-1
-lr = 0.05                   # learnining rate
-no_of_epoch = 150
+    y_pred = back_transform_y(A2,yu)
+    return y_pred[0]
 
-# Calling the main fuction
-#ycap, loss_dict, cc_percentage, wc_percentage = ann_training(x_df,y_df, hidden_layer1, lr, no_of_epoch)
+def ann_testing(x_df, y_df, model_param, yu):
+    ycap = []
+    for i in range(x_df.shape[0]):
+        x = x_df.iloc[i:i+1]
+        ycap.append(ann_predict(x, model_param, yu))
+
+    cc = np.sum(y_df==ycap)
+    wc = np.sum(y_df!=ycap)
+    cc_percentage = cc*100.0/(cc+wc)
+    wc_percentage = wc*100.0/(cc+wc)
+    print("\nTesting Dataset")
+    print("Percentage of correct classification: {:.2f}%".format(cc_percentage))
+    print("Percentage of wrong classification: {:.2f}%".format(wc_percentage))
+
+    return ycap, cc_percentage, wc_percentage
