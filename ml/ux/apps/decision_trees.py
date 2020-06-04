@@ -103,7 +103,8 @@ def get_dt_model_properties_div(df):
 
             html.Div([], id = "dt-model-class-do-nothing"),
             html.Div([], id = "dt-model-variables-do-nothing"),
-            html.Div([], id = "dt-train-data-do-nothing")
+            html.Div([], id = "dt-train-data-do-nothing"),
+            html.Div([], id = "dt-prediction-data-do-nothing")
             ],
             style = {'padding': '10px'})
         ])
@@ -178,10 +179,22 @@ def dt_model_train(n_clicks):
             tree = model.learn(training_set, cols, c)
             print(tree)
 
-            #db.put('cl.data_train', train_df)
-            #db.put('cl.data_test', test_df)
-            #db.put('cl.model_summary', summary)
-            #db.put('cl.model_instance', instanceOfLR)
+            test_set = test_df.values.tolist()
+            y_predict = model.predict(test_set)
+            cc_percentage = model.score(test_set, y_predict) * 100
+
+            summary = {}
+            summary['Total Training Data'] = len(train_df)
+            summary['Total Testing Data'] = len(test_df)
+            summary['Total Number of Features in Dataset'] = len(var)
+            summary['Model Accuracy %'] = round(cc_percentage, 2)
+            summary['Features'] = str(var)
+            summary_df = pd.DataFrame(summary.items(), columns=['Parameters', 'Value'])
+
+            db.put('dt.data_train', train_df)
+            db.put('dt.data_test', test_df)
+            db.put('dt.model_summary', summary)
+            db.put('dt.model_instance', model)
             #confusion_df = get_confusion_matrix(test_df, c, var, instanceOfLR)
         except Exception as e:
             traceback.print_exc()
@@ -192,17 +205,60 @@ def dt_model_train(n_clicks):
             dbc.Table.from_dataframe(distinct_count_df, striped=True, bordered=True, hover=True, style = common.table_style),
             html.H2('Tree:'),
             html.H2(str(tree)),
+            html.Br(),
             html.H2('Model Parameters & Summary:'),
-            #dbc.Table.from_dataframe(summary_df, striped=True, bordered=True, hover=True, style = common.table_style),
+            dbc.Table.from_dataframe(summary_df, striped=True, bordered=True, hover=True, style = common.table_style),
             html.Br(),
             #html.H2('Confusion Matrix (Precision & Recall):'),
             #dbc.Table.from_dataframe(confusion_df, striped=True, bordered=True, hover=True, style = common.table_style),
             html.Br(),
-            html.Br()
+            html.H2('Prediction/Classification:'),
+            html.P('Features to be Predicted (comma separated): ' + ','.join(var), style = {'font-size': '16px'}),
+            dbc.Input(id="dt-prediction-data", placeholder=','.join(var), type="text"),
+            html.Br(),
+            dbc.Button("Predict", color="primary", id = 'dt-predict'),
+            html.Div([], id = "dt-prediction")
             ])
     else:
         div = common.error_msg('Select Proper Model Parameters!!')
     return div
+
+@app.callback(
+    Output('dt-prediction-data-do-nothing' , "children"),
+    [Input('dt-prediction-data', 'value')]
+)
+def dt_model_prediction_data(value):
+    if not value is None:
+        db.put("dt.model_prediction_data", value)
+    return None
+
+@app.callback(
+    Output('dt-prediction' , "children"),
+    [Input('dt-predict', 'n_clicks')]
+)
+def dt_model_predict(n_clicks):
+    var = db.get('dt.model_variables')
+    predict_data = db.get("dt.model_prediction_data")
+    model = db.get('dt.model_instance')
+    n_var = len(var)
+
+    if predict_data is None:
+        return ("" , "")
+    if len(predict_data.split(',')) != n_var:
+        return (common.error_msg('Enter Valid Prediction Data!!'), "")
+    try:
+        feature_vector = get_predict_data_list(predict_data)
+        feature_vector.append(-1)
+        feature_vector = [feature_vector]
+
+        prediction = model.predict(feature_vector)
+        print(prediction)
+        prediction = str(prediction[0])
+        db.put('dt.prediction', prediction)
+    except Exception as e:
+        traceback.print_exc()
+        return (common.error_msg("Exception during prediction: " + str(e)), "")
+    return common.success_msg('Predicted/Classified Class = ' + prediction)
 
 def get_distinct_count_df(df, c, col):
     classes = df[c].unique()
@@ -216,3 +272,10 @@ def get_distinct_count_df(df, c, col):
     distinct_count['Gross Total = '] = total
     distinct_count = pd.DataFrame(distinct_count.items(), columns=['Class', col])
     return distinct_count
+
+def get_predict_data_list(predict_data: str) -> []:
+    predict_data = predict_data.split(',')
+    feature_vector = []
+    for d in predict_data:
+        feature_vector.append(str(d))
+    return feature_vector
