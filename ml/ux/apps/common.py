@@ -27,6 +27,7 @@ def navbar(page_name: str):
         brand_href="/",
         color="#25383C",
         dark=True,
+        fixed='top',
         style = {'font-size': '16px'},
         brand_style = {'font-size': '16px'}
     )

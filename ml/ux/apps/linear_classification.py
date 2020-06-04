@@ -6,6 +6,7 @@ import plotly.graph_objs as go
 
 import pandas as pd
 import numpy as np
+from sklearn.model_selection import train_test_split
 
 from ml.ux.app import app
 from ml.ux.apps import common
@@ -67,8 +68,9 @@ def cl_display_selected_file_scatter_plot(value):
     df = DataUtils.read_csv(path)
     db.put("cl.data", df)
 
-    stats = df.describe().head(3).round(5)
-    stats.insert(loc=0, column='Statistics', value=['Count', 'Mean', 'Standard Deviation'])
+    stats = df.describe(include = 'all').head(6).round(5)
+    stats.insert(loc=0, column='Statistics', value=['Count','unique','top','freq','Mean','Standard Deviation'])
+    stats = stats.drop(stats.index[[1,2,3]])
 
     div = html.Div([
         common.msg("Selected cleaned file: "+ file),
@@ -300,9 +302,7 @@ def cl_model_train(n_clicks):
             df = db.get('cl.data')
             df = df[cols]
 
-            msk = np.random.rand(len(df)) < (train / 100)
-            train_df = df[msk]
-            test_df = df[~msk]
+            train_df, test_df = train_test_split(df, test_size=(100-train)/100)
 
             distinct_count_df_total = get_distinct_count_df(df, c, 'Total Count')
             distinct_count_df_train = get_distinct_count_df(train_df, c, 'Training Count')
