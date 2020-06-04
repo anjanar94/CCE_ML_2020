@@ -3,9 +3,11 @@ import dash_html_components as html
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output
 import plotly.graph_objs as go
+import traceback
 
 import pandas as pd
 import numpy as np
+from sklearn.model_selection import train_test_split
 
 from ml.ux.app import app
 from ml.ux.apps import common
@@ -68,8 +70,9 @@ def sgd_display_selected_file_scatter_plot(value):
     df = DataUtils.read_csv(path)
     db.put("sgd.data", df)
 
-    stats = df.describe().head(3).round(5)
-    stats.insert(loc=0, column='Statistics', value=['Count', 'Mean', 'Standard Deviation'])
+    stats = df.describe(include = 'all').head(6).round(5)
+    stats.insert(loc=0, column='Statistics', value=['Count','unique','top','freq','Mean','Standard Deviation'])
+    stats = stats.drop(stats.index[[1,2,3]])
 
     div = html.Div([
         common.msg("Selected cleaned file: "+ file),
@@ -117,7 +120,7 @@ def sgd_display_selected_file_scatter_plot(value):
         dcc.Loading(id="sgd-model-training",
             children=[html.Div([], id = "sgd-trained-model", style = {'margin': '10px'})],
             type="default"),
-        #html.Div([], id = "sgd-trained-model", style = {'margin': '10px'}),
+        html.Div([], id = "sgd-predict-model", style = {'margin': '10px'}),
     ])
 
     return div
@@ -320,9 +323,7 @@ def sgd_model_train(n_clicks):
             ## Make DataFrame compatible for SGD API ##
             df, quantized_classes, reverse_quantized_classes = quantized_class(df, c)
 
-            msk = np.random.rand(len(df)) < (train / 100)
-            train_df = df[msk]
-            test_df = df[~msk]
+            train_df, test_df = train_test_split(df, test_size=(100-train)/100)
 
             distinct_count_df_total = get_distinct_count_df(df, c, 'Total Count')
             distinct_count_df_train = get_distinct_count_df(train_df, c, 'Training Count')
@@ -358,6 +359,7 @@ def sgd_model_train(n_clicks):
 
             confusion_df = get_confusion_matrix(test_df, c, var, model, yu, reverse_quantized_classes)
         except Exception as e:
+            traceback.print_exc()
             return common.error_msg("Exception during training model: " + str(e))
 
         trace = go.Scatter(x = loss_dict['Epoch_no'], y = loss_dict['Loss'],
@@ -375,19 +377,34 @@ def sgd_model_train(n_clicks):
             html.H2('Confusion Matrix (Precision & Recall):'),
             dbc.Table.from_dataframe(confusion_df, striped=True, bordered=True, hover=True, style = common.table_style),
             html.Br(),
-            html.Br(),
-            html.Br(),
-            html.H2('Prediction/Classification:'),
-            html.P('Features to be Predicted (comma separated): ' + ','.join(var), style = {'font-size': '16px'}),
-            dbc.Input(id="sgd-prediction-data", placeholder=','.join(var), type="text"),
-            html.Br(),
-            dbc.Button("Predict", color="primary", id = 'sgd-predict'),
-            html.Div([], id = "sgd-prediction"),
-            html.Div([],id = "sgd-predicted-scatter-plot")
+            html.Br()
             ])
     else:
         div = common.error_msg('Select Proper Model Parameters!!')
     return div
+
+@app.callback(
+    Output("sgd-predict-model", "children"),
+    [Input('sgd-trained-model', 'children')]
+)
+def sgd_predict_model_div(child):
+    model = db.get('sgd.model')
+    if model is None:
+        return ""
+
+    var = db.get('sgd.model_variables')
+
+    div = html.Div([
+        html.Br(),
+        html.H2('Prediction/Classification:'),
+        html.P('Features to be Predicted (comma separated): ' + ','.join(var), style = {'font-size': '16px'}),
+        dbc.Input(id="sgd-prediction-data", placeholder=','.join(var), type="text"),
+        html.Br(),
+        dbc.Button("Predict", color="primary", id = 'sgd-predict'),
+        html.Div([], id = "sgd-prediction")
+        ])
+    return div
+
 
 @app.callback(
     Output('sgd-prediction-data-do-nothing' , "children"),
@@ -399,132 +416,33 @@ def sgd_model_prediction_data(value):
     return None
 
 @app.callback(
-    [Output('sgd-prediction' , "children"),
-    Output('sgd-predicted-scatter-plot' , "children")],
+    Output('sgd-prediction' , "children"),
     [Input('sgd-predict', 'n_clicks')]
 )
 def sgd_model_predict(n_clicks):
+    var = db.get('sgd.model_variables')
     predict_data = db.get("sgd.model_prediction_data")
     summary = db.get('sgd.model_summary')
     model = db.get('sgd.model')
     yu = db.get('sgd.model_yu')
-    n_var = summary['Total Number of Features in Dataset']
-    var = db.get('sgd.model_variables')
-    test_df = db.get('sgd.data_test')
+    n_var = len(var)
+
     if predict_data is None:
         return ("" , "")
     if len(predict_data.split(',')) != n_var:
         return (common.error_msg('Enter Valid Prediction Data!!'), "")
     try:
         feature_vector = get_predict_data_list(predict_data)
-        #feature_vector = np.array(feature_vector)
-        l = len(test_df)
-        test_df.loc[l] = feature_vector
-        feature_vector = test_df[var].iloc[l:l+1]
-        print(l)
-        prediction = ann_predict(feature_vector, model, yu)
+        df = pd.DataFrame(columns=var)
+        df.loc[0] = feature_vector
+        prediction = ann_predict(df, model, yu)
+        reverse_quantized_classes = db.get('sgd.reverse_quantized_classes')
+        prediction = reverse_quantized_classes[int(prediction)]
         db.put('sgd.prediction', prediction)
     except Exception as e:
+        traceback.print_exc()
         return (common.error_msg("Exception during prediction: " + str(e)), "")
-    df = db.get('sgd.data_train')
-    df = df.iloc[:, :-1]
-    div = html.Div([
-        html.Div([html.H2("Predicted & Testing Data Scatter Plot")], style={'width': '100%', 'display': 'flex', 'align-items': 'center', 'justify-content': 'center'}),
-        dbc.Row([
-            dbc.Col([
-                dbc.Label("Select X Axis"),
-                dcc.Dropdown(
-                    id = 'sgd-x-axis-predict',
-                    options=[{'label':col, 'value':col} for col in [*df]],
-                    value=None,
-                    multi=False
-                ),
-                html.Br(),
-                dbc.Label("Select Y Axis"),
-                dcc.Dropdown(
-                    id = 'sgd-y-axis-predict',
-                    options=[{'label':col, 'value':col} for col in [*df]],
-                    value=None,
-                    multi=False
-                ),
-                html.Br(),
-                dbc.Button("Plot", color="primary", id = 'sgd-predict-scatter-plot-button'),
-                html.Div([], id = "sgd-x-axis-predict-do-nothing"),
-                html.Div([], id = "sgd-y-axis-predict-do-nothing")
-            ], md=2,
-            style = {'margin': '10px', 'font-size': '16px'}),
-            dbc.Col([], md=9, id="sgd-scatter-plot-predict")
-        ]),
-
-    ])
-    return (common.success_msg('Predicted/Classified Class = ' + prediction), div)
-
-@app.callback(
-    Output('sgd-x-axis-predict-do-nothing' , "children"),
-    [Input('sgd-x-axis-predict', 'value')]
-)
-def sgd_x_axis(value):
-    if not value is None:
-        db.put("sgd.x_axis_predict", value)
-    return None
-
-@app.callback(
-    Output('sgd-y-axis-predict-do-nothing' , "children"),
-    [Input('sgd-y-axis-predict', 'value')]
-)
-def sgd_y_axis(value):
-    if not value is None:
-        db.put("sgd.y_axis_predict", value)
-    return None
-
-@app.callback(
-    Output("sgd-scatter-plot-predict", "children"),
-    [Input('sgd-predict-scatter-plot-button', 'n_clicks')]
-)
-def sgd_scatter_plot(n):
-    df = db.get("sgd.data_test")
-    clazz_col = db.get('sgd.model_class')
-    x_col = db.get("sgd.x_axis_predict")
-    y_col = db.get("sgd.y_axis_predict")
-    predict_data = db.get("sgd.model_prediction_data")
-    prediction = db.get('sgd.prediction')
-    reverse_quantized_classes = db.get('sgd.reverse_quantized_classes')
-
-    feature_vector = get_predict_data_list(predict_data)
-    feature_vector.append('Predicted-'+prediction)
-    df.loc[len(df)] = feature_vector
-    df[c] = df[c].map(reverse_quantized_classes)
-
-    if clazz_col is None or x_col is None or y_col is None:
-        return None
-    graph = dcc.Graph(
-        id='sgd-x-vs-y-predict',
-        figure={
-            'data': [
-                go.Scatter(
-                    x=df[df[clazz_col] == clazz][x_col],
-                    y=df[df[clazz_col] == clazz][y_col],
-                    text=df[df[clazz_col] == clazz][clazz_col],
-                    mode='markers',
-                    opacity=0.8,
-                    marker={
-                        'size': 15,
-                        'line': {'width': 0.5, 'color': 'white'}
-                    },
-                    name=clazz
-                ) for clazz in df[clazz_col].unique()
-            ],
-            'layout': dict(
-                #title='Scatter Plot',
-                xaxis={'title': x_col},
-                yaxis={'title': y_col},
-                margin={'l': 40, 'b': 40},
-                legend={'x': 0, 'y': 1},
-                hovermode='closest'
-            )
-        }
-    )
-    return graph
+    return common.success_msg('Predicted/Classified Class = ' + prediction)
 
 def get_predict_data_list(predict_data: str) -> []:
     predict_data = predict_data.split(',')
