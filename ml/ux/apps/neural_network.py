@@ -19,6 +19,7 @@ import base64
 
 layout = html.Div([
     common.navbar("Neural Network"),
+    html.Div([], style = {'padding': '30px'}),
     html.Br(),
     html.Div([
         html.P("A Digit Recognition Neural Network is Trained on the MNIST Handwritten Digit Images of 28*28 Pixels."),

@@ -19,6 +19,7 @@ from ml.decision_trees import DecisionTree
 
 layout = html.Div([
     common.navbar("Decision Trees"),
+    html.Div([], style = {'padding': '30px'}),
     html.Br(),
     html.Div([
         html.H2("Load and Select a file from all the cleaned files:"),

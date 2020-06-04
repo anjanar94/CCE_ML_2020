@@ -19,6 +19,7 @@ from ml.linear_classification import LogisticRegression
 
 layout = html.Div([
     common.navbar("Classification - Linearly Separable"),
+    html.Div([], style = {'padding': '30px'}),
     html.Br(),
     html.Div([
         html.H2("Load and Select a file from all the cleaned files:"),

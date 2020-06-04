@@ -3,6 +3,7 @@ import dash_html_components as html
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output
 import plotly.graph_objs as go
+import traceback
 
 import pandas as pd
 import numpy as np
@@ -14,8 +15,11 @@ from ml.framework.database import db
 from ml.framework.file_utils import FileUtils
 from ml.framework.data_utils import DataUtils
 
+from ml.non_linear_classification import non_separable_train
+
 layout = html.Div([
     common.navbar("Classification - Linearly Non-Separable"),
+    html.Div([], style = {'padding': '30px'}),
     html.Br(),
     html.Div([
         html.H2("Load and Select a file from all the cleaned files:"),
@@ -264,8 +268,9 @@ def nlcl_model_train(n_clicks):
         div = ""
     elif train is None or train < 0 or train > 100:
         div = common.error_msg('Training % should be between 0 - 100 !!')
+    elif len(var) != 2:
+        div = common.error_msg('Select Two Features!!')
     elif (not c is None) and (not var is None) and (not train is None):
-        #parameters = "Training Data = " + str(train) + " % Testing Data = " + str(100 - train) + " % Learning rate = " + str(lr) + " Epoch = " + str(epoch)
 
         try:
             cols = [] + var
@@ -273,9 +278,10 @@ def nlcl_model_train(n_clicks):
             df = db.get('nlcl.data')
             df = df[cols]
 
-            msk = np.random.rand(len(df)) < (train / 100)
-            train_df = df[msk]
-            test_df = df[~msk]
+
+            train_df, test_df = train_test_split(df, test_size=(100-train)/100)
+            train_df.columns = ['X1', 'X2', 'Class']
+            test_df.columns = ['X1', 'X2', 'Class']
 
             distinct_count_df_total = get_distinct_count_df(df, c, 'Total Count')
             distinct_count_df_train = get_distinct_count_df(train_df, c, 'Training Count')
@@ -284,31 +290,80 @@ def nlcl_model_train(n_clicks):
             distinct_count_df = distinct_count_df_total.join(distinct_count_df_train.set_index('Class'), on='Class')
             distinct_count_df = distinct_count_df.join(distinct_count_df_test.set_index('Class'), on='Class')
 
-            instanceOfLR, summary = linearClassifier(train_df, test_df, len(var), lr, epoch)
+            model = non_separable_train(train_df)
+            print(model)
+            summary = {}
+            summary['Total Training Data'] = len(train_df)
+            summary['Total Testing Data'] = len(test_df)
+            summary['Total Number of Features in Dataset'] = len(var)
+            summary['Model Accuracy %'] = 'TODO'
             summary['Features'] = str(var)
             summary_df = pd.DataFrame(summary.items(), columns=['Parameters', 'Value'])
+
             db.put('nlcl.data_train', train_df)
             db.put('nlcl.data_test', test_df)
             db.put('nlcl.model_summary', summary)
-            db.put('nlcl.model_instance', instanceOfLR)
-            confusion_df = get_confusion_matrix(test_df, c, var, instanceOfLR)
+            #db.put('nlcl.model_instance', instanceOfLR)
+            #confusion_df = get_confusion_matrix(test_df, c, var, instanceOfLR)
         except Exception as e:
+            traceback.print_exc()
             return common.error_msg("Exception during training model: " + str(e))
+
+        clazz_col = c
+        x_col = var[0]
+        y_col = var[1]
+        x1, y1 = get_rect_coordinates(model[0])
+        x2, y2 = get_rect_coordinates(model[1])
+        x3, y3 = get_rect_coordinates(model[2])
+        graph_data = [
+            go.Scatter(
+                x=df[df[clazz_col] == clazz][x_col],
+                y=df[df[clazz_col] == clazz][y_col],
+                text=df[df[clazz_col] == clazz][clazz_col],
+                mode='markers',
+                opacity=0.8,
+                marker={
+                    'size': 15,
+                    'line': {'width': 0.5, 'color': 'white'}
+                },
+                name=clazz
+            ) for clazz in df[clazz_col].unique()
+        ]
+        graph_data.append(go.Scatter(x=x1, y=y1, text = 'Specific Rectangle', name = 'Specific Rectangle'))
+        graph_data.append(go.Scatter(x=x3, y=y3, text = 'Optimal Rectangle', name = 'Optimal Rectangle'))
+        graph_data.append(go.Scatter(x=x2, y=y2, text = 'Generic Rectangle', name = 'Generic Rectangle'))
+
+        graph = dcc.Graph(
+            id='nlcl-x-vs-y-rectangle',
+            figure={
+                'data': graph_data,
+                'layout': dict(
+                    title='Boundaries & Scatter Plot',
+                    xaxis={'title': x_col},
+                    yaxis={'title': y_col},
+                    margin={'l': 40, 'b': 40},
+                    legend={'x': 0, 'y': 1},
+                    hovermode='closest'
+                )
+            }
+        )
 
         div = html.Div([
             html.H2('Class Grouping in Data:'),
             dbc.Table.from_dataframe(distinct_count_df, striped=True, bordered=True, hover=True, style = common.table_style),
             html.H2('Model Parameters & Summary:'),
             dbc.Table.from_dataframe(summary_df, striped=True, bordered=True, hover=True, style = common.table_style),
-            html.H2('Confusion Matrix (Precision & Recall):'),
-            dbc.Table.from_dataframe(confusion_df, striped=True, bordered=True, hover=True, style = common.table_style),
-            html.H2('Prediction/Classification:'),
-            html.P('Features to be Predicted (comma separated): ' + ','.join(var), style = {'font-size': '16px'}),
-            dbc.Input(id="nlcl-prediction-data", placeholder=','.join(var), type="text"),
             html.Br(),
-            dbc.Button("Predict", color="primary", id = 'nlcl-predict'),
-            html.Div([], id = "nlcl-prediction"),
-            html.Div([],id = "nlcl-predicted-scatter-plot")
+            graph,
+            #html.H2('Confusion Matrix (Precision & Recall):'),
+            #dbc.Table.from_dataframe(confusion_df, striped=True, bordered=True, hover=True, style = common.table_style),
+            #html.H2('Prediction/Classification:'),
+            #html.P('Features to be Predicted (comma separated): ' + ','.join(var), style = {'font-size': '16px'}),
+            #dbc.Input(id="nlcl-prediction-data", placeholder=','.join(var), type="text"),
+            #html.Br(),
+            #dbc.Button("Predict", color="primary", id = 'nlcl-predict'),
+            #html.Div([], id = "nlcl-prediction"),
+            #html.Div([],id = "nlcl-predicted-scatter-plot")
         ])
     else:
         div = common.error_msg('Select Proper Model Parameters!!')
@@ -484,3 +539,23 @@ def get_confusion_matrix(df, c, var, model):
         df.loc[i] = [k, v['t_ret'],v['t_rel'], v['rr'], round(v['rr']/v['t_ret'], 4), round(v['rr']/v['t_rel'], 4)]
         i = i+1
     return df
+
+def get_rect_coordinates(cr: []):
+    x = [0,0,0,0,0]
+    y = [0,0,0,0,0]
+    x[0] = cr[0]
+    y[0] = cr[1]
+
+    x[1] = cr[2]
+    y[1] = cr[1]
+
+    x[2] = cr[2]
+    y[2] = cr[3]
+
+    x[3] = cr[0]
+    y[3] = cr[3]
+
+    x[4] = cr[0]
+    y[4] = cr[1]
+
+    return x, y

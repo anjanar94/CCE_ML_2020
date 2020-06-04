@@ -11,6 +11,7 @@ from ml.framework.database import db
 
 layout = html.Div([
     common.navbar("Home"),
+    html.Div([], style = {'padding': '30px'}),
     html.Br(),
     html.H3(
         children='A tool developed as part of IISc CCE Machine Learning Course, 2020',

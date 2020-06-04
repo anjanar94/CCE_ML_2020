@@ -21,6 +21,7 @@ from ml.stochastic_neural_net import ann_predict
 
 layout = html.Div([
     common.navbar("Stochastic Gradient Descent"),
+    html.Div([], style = {'padding': '30px'}),
     html.Br(),
     html.Div([
         html.H2("Load and Select a file from all the cleaned files:"),

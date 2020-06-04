@@ -17,4 +17,5 @@ from ml.framework.data_utils import DataUtils
 
 layout = html.Div([
     common.navbar("K Nearest Neighbors (KNN)"),
+    html.Div([], style = {'padding': '30px'}),
 ])
