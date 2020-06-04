@@ -281,7 +281,6 @@ def nlcl_model_train(n_clicks):
 
             train_df, test_df = train_test_split(df, test_size=(100-train)/100)
             train_df.columns = ['X1', 'X2', 'Class']
-            test_df.columns = ['X1', 'X2', 'Class']
 
             distinct_count_df_total = get_distinct_count_df(df, c, 'Total Count')
             distinct_count_df_train = get_distinct_count_df(train_df, c, 'Training Count')
@@ -310,6 +309,8 @@ def nlcl_model_train(n_clicks):
             return common.error_msg("Exception during training model: " + str(e))
 
         clazz_col = c
+        train_df.columns = cols
+        df = train_df
         x_col = var[0]
         y_col = var[1]
         x1, y1 = get_rect_coordinates(model[0])
@@ -338,7 +339,7 @@ def nlcl_model_train(n_clicks):
             figure={
                 'data': graph_data,
                 'layout': dict(
-                    title='Boundaries & Scatter Plot',
+                    title='Boundaries & Train DataSet Scatter Plot',
                     xaxis={'title': x_col},
                     yaxis={'title': y_col},
                     margin={'l': 40, 'b': 40},
