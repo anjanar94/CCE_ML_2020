@@ -151,7 +151,7 @@ def apply_file_properties(n):
         df.to_csv(path, index=False)
         db.put("data", df)
         msg = "Following Properties Applied. Separator=" + sep + " Header="+ str(header)
-        table = dbc.Table.from_dataframe(df.head(10), striped=True, bordered=True, hover=True, style = common.table_style)
+        table = dbc.Table.from_dataframe(df.head(10).astype(str), striped=True, bordered=True, hover=True, style = common.table_style)
         div = [common.msg(msg), table]
     return div
 
