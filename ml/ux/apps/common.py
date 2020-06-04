@@ -14,6 +14,8 @@ def navbar(page_name: str):
                     dbc.DropdownMenuItem("Neural Network", href="/apps/neural-network", id = "neural-network", style = {'font-size': '16px'}),
                     dbc.DropdownMenuItem("Stochastic Gradient Descent", href="/apps/stochastic-gradient-descent", id = "stochastic-gradient-descent", style = {'font-size': '16px'}),
                     dbc.DropdownMenuItem("Decision Trees", href="/apps/decision-trees", id = "decision-trees", style = {'font-size': '16px'}),
+                    dbc.DropdownMenuItem("Principle Component Analysis", href="/apps/pca", id = "pca", style = {'font-size': '16px'}),
+                    dbc.DropdownMenuItem("K Nearest Neighbors", href="/apps/knn", id = "knn", style = {'font-size': '16px'})
                 ],
                 nav=True,
                 in_navbar=True,
