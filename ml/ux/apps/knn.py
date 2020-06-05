@@ -7,7 +7,6 @@ import traceback
 
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
 
 from ml.ux.app import app
 from ml.ux.apps import common
@@ -291,8 +290,8 @@ def knn_model_train(n_clicks):
             df = db.get('knn.data')
             df = df[cols]
 
-            train_df, test_df = train_test_split(df, test_size=(100-train)/100)
-
+            train_df, test_df = common.split_df(df, c, train)
+            
             distinct_count_df_total = get_distinct_count_df(df, c, 'Total Count')
             distinct_count_df_train = get_distinct_count_df(train_df, c, 'Training Count')
             distinct_count_df_test = get_distinct_count_df(test_df, c, 'Testing Count')

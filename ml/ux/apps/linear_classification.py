@@ -3,10 +3,10 @@ import dash_html_components as html
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output
 import plotly.graph_objs as go
+import traceback
 
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
 
 from ml.ux.app import app
 from ml.ux.apps import common
@@ -303,7 +303,7 @@ def cl_model_train(n_clicks):
             df = db.get('cl.data')
             df = df[cols]
 
-            train_df, test_df = train_test_split(df, test_size=(100-train)/100)
+            train_df, test_df = common.split_df(df, c, train)
 
             distinct_count_df_total = get_distinct_count_df(df, c, 'Total Count')
             distinct_count_df_train = get_distinct_count_df(train_df, c, 'Training Count')
@@ -321,6 +321,7 @@ def cl_model_train(n_clicks):
             db.put('cl.model_instance', instanceOfLR)
             confusion_df = get_confusion_matrix(test_df, c, var, instanceOfLR)
         except Exception as e:
+            traceback.print_exc()
             return common.error_msg("Exception during training model: " + str(e))
 
         div = html.Div([
@@ -371,6 +372,7 @@ def cl_model_predict(n_clicks):
         prediction = lr_instance.predict(feature_vector)
         db.put('cl.prediction', prediction)
     except Exception as e:
+        traceback.print_exc()
         return (common.error_msg("Exception during prediction: " + str(e)), "")
     df = db.get('cl.data_train')
     df = df.iloc[:, :-1]

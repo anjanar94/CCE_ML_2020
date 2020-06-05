@@ -1,5 +1,7 @@
 import dash_bootstrap_components as dbc
 import dash_html_components as html
+import pandas as pd
+from sklearn.model_selection import train_test_split
 
 from ml.framework.file_utils import FileUtils
 
@@ -65,3 +67,15 @@ def get_options(dir: str):
         return [{'label':'No files yet!', 'value':'None'}]
     else:
         return [{'label':file, 'value':file} for file in files]
+
+def split_df(df, c: str, train: float):
+    train_frames = []
+    test_frames = []
+    for clazz in df[c].unique():
+        clazz_df = df[df[c] == clazz]
+        train_df, test_df = train_test_split(clazz_df, test_size=(100-train)/100)
+        train_frames.append(train_df)
+        test_frames.append(test_df)
+    train_df = pd.concat(train_frames)
+    test_df = pd.concat(test_frames)
+    return train_df, test_df

@@ -7,7 +7,6 @@ import traceback
 
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
 
 from ml.ux.app import app
 from ml.ux.apps import common
@@ -324,7 +323,7 @@ def sgd_model_train(n_clicks):
             ## Make DataFrame compatible for SGD API ##
             df, quantized_classes, reverse_quantized_classes = quantized_class(df, c)
 
-            train_df, test_df = train_test_split(df, test_size=(100-train)/100)
+            train_df, test_df = common.split_df(df, c, train)
 
             distinct_count_df_total = get_distinct_count_df(df, c, 'Total Count')
             distinct_count_df_train = get_distinct_count_df(train_df, c, 'Training Count')

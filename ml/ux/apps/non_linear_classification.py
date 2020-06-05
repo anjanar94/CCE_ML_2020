@@ -7,7 +7,6 @@ import traceback
 
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
 
 from ml.ux.app import app
 from ml.ux.apps import common
@@ -279,7 +278,7 @@ def nlcl_model_train(n_clicks):
             df = df[cols]
 
 
-            train_df, test_df = train_test_split(df, test_size=(100-train)/100)
+            train_df, test_df = common.split_df(df, c, train)
             train_df.columns = ['X1', 'X2', 'Class']
 
             distinct_count_df_total = get_distinct_count_df(df, c, 'Total Count')
