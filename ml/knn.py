@@ -147,7 +147,7 @@ def knn_algorithm(dataset, k, test_split = 0.2):
     result = []
     #dataset = load_input_csv(data_filename)
     n_columns = len(dataset[0])
-    print(f"Loaded file {data_filename} with {len(dataset)} rows and {len(dataset[0])} columns")
+    print(f"Loaded dataset with {len(dataset)} rows and {len(dataset[0])} columns")
 
     for i in range(n_columns - 1):
         dataset = convert_to_float(dataset, i)

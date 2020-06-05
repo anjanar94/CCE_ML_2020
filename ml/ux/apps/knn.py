@@ -17,6 +17,7 @@ from ml.framework.data_utils import DataUtils
 
 from ml.knn import knn_predict
 from ml.knn import load_input_csv
+from ml.knn import calculate_predict_accuracy
 
 layout = html.Div([
     common.navbar("K Nearest Neighbors (KNN)"),
@@ -299,32 +300,25 @@ def knn_model_train(n_clicks):
             distinct_count_df = distinct_count_df_total.join(distinct_count_df_train.set_index('Class'), on='Class')
             distinct_count_df = distinct_count_df.join(distinct_count_df_test.set_index('Class'), on='Class')
 
-            train_path = FileUtils.path('knn', file.split('.')[0]+'-train')
-            train_df.to_csv(train_path, index=False)
-            train_dataset = load_input_csv(train_path)
-            print(train_dataset)
-
-            test_path = FileUtils.path('knn', file.split('.')[0]+'-test')
-            test_df.to_csv(test_path, index=False)
-            test_dataset = load_input_csv(test_path)
-            print(test_dataset)
+            train_dataset = train_df[cols].astype(str).values.tolist()
+            test_dataset = test_df[cols].astype(str).values.tolist()
 
             result = knn_predict(train_dataset, test_dataset, k)
-            print(result)
+            cc_percentage = calculate_predict_accuracy(result)
 
             summary = {}
             summary['Total Training Data'] = len(train_df)
             summary['Total Testing Data'] = len(test_df)
             summary['Total Number of Features in Dataset'] = len(var)
-            summary['Model Accuracy %'] = 'TODO'
+            summary['Model Accuracy %'] = round(cc_percentage, 2)
             summary['Features'] = str(var)
             summary_df = pd.DataFrame(summary.items(), columns=['Parameters', 'Value'])
 
             db.put('knn.data_train', train_df)
             db.put('knn.data_test', test_df)
             db.put('knn.model_summary', summary)
-            #db.put('knn.model_instance', instanceOfLR)
-            #confusion_df = get_confusion_matrix(test_df, c, var, instanceOfLR)
+            classes = df[c].unique()
+            confusion_df = get_confusion_matrix(result, classes)
         except Exception as e:
             traceback.print_exc()
             return common.error_msg("Exception during training model: " + str(e))
@@ -334,15 +328,15 @@ def knn_model_train(n_clicks):
             dbc.Table.from_dataframe(distinct_count_df, striped=True, bordered=True, hover=True, style = common.table_style),
             html.H2('Model Parameters & Summary:'),
             dbc.Table.from_dataframe(summary_df, striped=True, bordered=True, hover=True, style = common.table_style),
-            #html.H2('Confusion Matrix (Precision & Recall):'),
-            #dbc.Table.from_dataframe(confusion_df, striped=True, bordered=True, hover=True, style = common.table_style),
-            #html.H2('Prediction/Classification:'),
-            #html.P('Features to be Predicted (comma separated): ' + ','.join(var), style = {'font-size': '16px'}),
-            #dbc.Input(id="knn-prediction-data", placeholder=','.join(var), type="text"),
-            #html.Br(),
-            #dbc.Button("Predict", color="primary", id = 'knn-predict'),
-            #html.Div([], id = "knn-prediction"),
-            #html.Div([],id = "knn-predicted-scatter-plot")
+            html.H2('Confusion Matrix (Precision & Recall):'),
+            dbc.Table.from_dataframe(confusion_df, striped=True, bordered=True, hover=True, style = common.table_style),
+            html.H2('Prediction/Classification:'),
+            html.P('Features to be Predicted (comma separated): ' + ','.join(var), style = {'font-size': '16px'}),
+            dbc.Input(id="knn-prediction-data", placeholder=','.join(var), type="text"),
+            html.Br(),
+            dbc.Button("Predict", color="primary", id = 'knn-predict'),
+            html.Div([], id = "knn-prediction"),
+            html.Div([],id = "knn-predicted-scatter-plot")
         ])
     else:
         div = common.error_msg('Select Proper Model Parameters!!')
@@ -363,25 +357,36 @@ def knn_model_prediction_data(value):
     [Input('knn-predict', 'n_clicks')]
 )
 def knn_model_predict(n_clicks):
+    c = db.get('knn.model_class')
     predict_data = db.get("knn.model_prediction_data")
-    summary = db.get('knn.model_summary')
-    lr_instance = db.get('knn.model_instance')
-    n_var = summary['Total Number of Features in Dataset']
+    var = db.get('knn.model_variables')
+    n_var = len(var)
+    k = db.get('knn.distance')
+    train_df = db.get('knn.data_train')
     if predict_data is None:
         return ("" , "")
     if len(predict_data.split(',')) != n_var:
         return (common.error_msg('Enter Valid Prediction Data!!'), "")
     try:
+        cols = [] + var
+        cols.append(c)
+        train_dataset = train_df[cols].astype(str).values.tolist()
+
         feature_vector = get_predict_data_list(predict_data)
-        feature_vector = np.array(feature_vector)
-        prediction = lr_instance.predict(feature_vector)
+        feature_vector.append('')
+        feature_vector = [feature_vector]
+
+        result = knn_predict(train_dataset, feature_vector, k)
+        prediction = result[0][-1]
+        print(prediction)
         db.put('knn.prediction', prediction)
     except Exception as e:
+        traceback.print_exc()
         return (common.error_msg("Exception during prediction: " + str(e)), "")
     df = db.get('knn.data_train')
     df = df.iloc[:, :-1]
     div = html.Div([
-        html.Div([html.H2("Predicted & Testing Data Scatter Plot")], style={'width': '100%', 'display': 'flex', 'align-items': 'center', 'justify-content': 'center'}),
+        html.Div([html.H2("Predicted & Training Data Set Scatter Plot")], style={'width': '100%', 'display': 'flex', 'align-items': 'center', 'justify-content': 'center'}),
         dbc.Row([
             dbc.Col([
                 dbc.Label("Select X Axis"),
@@ -480,7 +485,7 @@ def get_predict_data_list(predict_data: str) -> []:
     predict_data = predict_data.split(',')
     feature_vector = []
     for d in predict_data:
-        feature_vector.append(float(d))
+        feature_vector.append(str(d))
     return feature_vector
 
 def get_distinct_count_df(df, c, col):
@@ -496,18 +501,13 @@ def get_distinct_count_df(df, c, col):
     distinct_count = pd.DataFrame(distinct_count.items(), columns=['Class', col])
     return distinct_count
 
-def get_confusion_matrix(df, c, var, model):
-    classes = df[c].unique()
+def get_confusion_matrix(result, classes):
     d = {}
     for clazz in classes:
         d[clazz] = {'t_rel':0, 't_ret':0, 'rr':0}
-    for index, row in df.iterrows():
-        feature_vector = []
-        for v in var:
-            feature_vector.append(row[v])
-        feature_vector = np.array(feature_vector)
-        clazz = row[c]
-        prediction = model.predict(feature_vector)
+    for row in result:
+        clazz = row[0][-1]
+        prediction = row[1]
         d[clazz]['t_rel'] = d[clazz]['t_rel'] + 1
         d[prediction]['t_ret'] = d[prediction]['t_ret'] + 1
         if clazz == prediction:
