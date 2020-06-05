@@ -1,13 +1,14 @@
 """
-Created on 29May2020
+Created on 04June2020
 
 @author: Team-5 (Pls call Abhay Kumar, 9940084930 if any query)
 """
 import numpy as np
 import pandas as pd
 from random import random, seed, randrange
+import matplotlib.pyplot as plt
 
-## Defining Artificial Neural Network Class for one hidden layer only
+## Defining Artificial Neural Network Class for two hidden layer only
 
 # https://towardsdatascience.com/coding-a-2-layer-neural-network-from-scratch-in-python-4dd022d19fd2
 # https://towardsdatascience.com/the-keys-of-deep-learning-in-100-lines-of-code-907398c76504
@@ -16,7 +17,7 @@ class ANN:
     # intializing the network input and parameters
     def __init__(self, dims):
         self.dims = dims
-        self.Yh = np.zeros((dims[2],1))
+        self.Yh = np.zeros((dims[3],1))
         self.param = {}
         self.ch = {}
         self.loss = []
@@ -29,7 +30,8 @@ class ANN:
         self.param['b1'] = np.zeros((self.dims[1], 1))
         self.param['W2'] = np.random.randn(self.dims[2], self.dims[1]) / np.sqrt(self.dims[1])
         self.param['b2'] = np.zeros((self.dims[2], 1))
-        #print('W1:', self.param)
+        self.param['W3'] = np.random.randn(self.dims[3], self.dims[2]) / np.sqrt(self.dims[2])
+        self.param['b3'] = np.zeros((self.dims[3], 1))
         return
 
     def Sigmoid(self, Z):
@@ -48,12 +50,15 @@ class ANN:
         A2 = self.Sigmoid(Z2)
         #A2 = self.Relu(Z2)
         self.ch['Z2'], self.ch['A2'] = Z2, A2
-        self.yh = A2
-        #print("Yh:", self.yh)
+
+        Z3 = self.param['W3'].dot(A2) + self.param['b3']
+        A3 = self.Sigmoid(Z3)
+        #A3 = self.Relu(Z3)
+        self.ch['Z3'], self.ch['A3'] = Z3, A3
+        self.yh = A3
+
         squared_errors = (self.yh - yb) ** 2
-        #print('sq error:', squared_errors)
         loss_sum = np.sum(squared_errors)
-        #print("loss sum:", loss_sum)
         return self.yh, loss_sum
 
     def dRelu(self, x):
@@ -68,7 +73,13 @@ class ANN:
 
     def backward(self,Xa,yb):
         dLoss_Yh = -(yb - self.yh)
-        dLoss_Z2 = dLoss_Yh * self.dSigmoid(self.ch['Z2'])
+        dLoss_Z3 = dLoss_Yh * self.dSigmoid(self.ch['Z3'])
+        #dLoss_Z3 = dLoss_Yh * self.dRelu(self.ch['Z3'])
+        dLoss_A2 = np.dot(self.param["W3"].T,dLoss_Z3)
+        dLoss_W3 = 1. * np.dot(dLoss_Z3,self.ch['A2'].T)
+        dLoss_b3 = 1. * np.dot(dLoss_Z3, np.ones([dLoss_Z3.shape[1],1]))
+
+        dLoss_Z2 = dLoss_A2 * self.dSigmoid(self.ch['Z2'])
         #dLoss_Z2 = dLoss_Yh * self.dRelu(self.ch['Z2'])
         dLoss_A1 = np.dot(self.param["W2"].T,dLoss_Z2)
         dLoss_W2 = 1. * np.dot(dLoss_Z2,self.ch['A1'].T)
@@ -84,6 +95,8 @@ class ANN:
         self.param["b1"] = self.param["b1"] - self.lr * dLoss_b1
         self.param["W2"] = self.param["W2"] - self.lr * dLoss_W2
         self.param["b2"] = self.param["b2"] - self.lr * dLoss_b2
+        self.param["W3"] = self.param["W3"] - self.lr * dLoss_W3
+        self.param["b3"] = self.param["b3"] - self.lr * dLoss_b3
 
     def sgd(self,Xa, yb, iter = 20):
         for i in range(0, iter):
@@ -95,8 +108,6 @@ class ANN:
         comp = np.zeros((1,x.shape[1]))
         pred, loss_sum = self.forward(x,y)
         comp = np.around(pred,0)
-        #print("Acc: " + str(np.sum((comp == y)/x.shape[1])))
-
         return comp, loss_sum
 
 ## Function for transforming Y to take care of multi-class output
@@ -125,13 +136,13 @@ def back_transform_y(y_pred, yu):
 
 
 ## Function for training the ANN and displaying accuracy
-def ann_training(x_df,y_df, hidden_layer1, lr, no_of_epoch):
-    print('Stochastic Gradient Descent 1 Hidden Layer - Train')
+def ann_training_h2(x_df,y_df, hidden_layer1, hidden_layer2, lr, no_of_epoch):
+    print('Stochastic Gradient Descent 2 Hidden Layer - Train')
     X, y, yc_df, yu = transform_Xy(x_df,y_df)
 
     input_layer = X.shape[0]
     output_layer = y.shape[0]
-    dims = [input_layer, hidden_layer1, output_layer]
+    dims = [input_layer, hidden_layer1, hidden_layer2, output_layer]
 
     nn = ANN(dims)
     nn.Init_weights()
@@ -173,23 +184,30 @@ def Sigmoid(Z):
         return 1/(1+np.exp(-Z))
 
 ## Function for predicting / forcasting for a X dataset
-def ann_predict(x_df, model_param, yu):
-    X = x_df.values.transpose()
+def ann_predict_h2(x_df, model_param, yu):
+    if isinstance(x_df, pd.DataFrame):
+        X = x_df.values.transpose()
+    elif isinstance(x_df, list):
+        X = np.zeros((len(x_df),1))
+        for i in range(len(x_df)):
+            X[i,0] = x_df[i]
+
     Z1 = model_param['W1'].dot(X) + model_param['b1']
     A1 = Sigmoid(Z1)
     Z2 = model_param['W2'].dot(A1) + model_param['b2']
     A2 = Sigmoid(Z2)
-    #print('A2', A2)
+    Z3 = model_param['W3'].dot(A2) + model_param['b3']
+    A3 = Sigmoid(Z3)
 
-    y_pred = back_transform_y(A2,yu)
+    y_pred = back_transform_y(A3,yu)
     return y_pred[0]
 
-def ann_testing(x_df, y_df, model_param, yu):
-    print('Stochastic Gradient Descent 1 Hidden Layer - Test')
+def ann_testing_h2(x_df, y_df, model_param, yu):
+    print('Stochastic Gradient Descent 2 Hidden Layer - Test')
     ycap = []
     for i in range(x_df.shape[0]):
         x = x_df.iloc[i:i+1]
-        ycap.append(ann_predict(x, model_param, yu))
+        ycap.append(ann_predict_h2(x, model_param, yu))
 
     cc = np.sum(y_df==ycap)
     wc = np.sum(y_df!=ycap)

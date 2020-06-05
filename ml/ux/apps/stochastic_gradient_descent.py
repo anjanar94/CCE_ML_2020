@@ -18,6 +18,10 @@ from ml.stochastic_neural_net import ann_training
 from ml.stochastic_neural_net import ann_testing
 from ml.stochastic_neural_net import ann_predict
 
+from ml.stochastic_neural_net_2_layer import ann_training_h2
+from ml.stochastic_neural_net_2_layer import ann_testing_h2
+from ml.stochastic_neural_net_2_layer import ann_predict_h2
+
 layout = html.Div([
     common.navbar("Stochastic Gradient Descent"),
     html.Div([], style = {'padding': '30px'}),
@@ -210,8 +214,10 @@ def get_sgd_model_properties_div(df):
                 multi=True),
             dbc.Label("Train Data %"),
             dbc.Input(id="sgd-train-data", placeholder="70,75,80,85,90", type="number"),
-            dbc.Label("No of Neuron in each Hidden Layer"),
+            dbc.Label("No of Neuron in each Hidden Layer 1"),
             dbc.Input(id="sgd-no-of-neuron", placeholder="5,10,15", type="number"),
+            dbc.Label("No of Neuron in each Hidden Layer 2 (only for 2 layer Neural Net)"),
+            dbc.Input(id="sgd-no-of-neuron-h2", placeholder="5,10,15", type="number"),
             dbc.Label("Learning Rate"),
             dbc.Input(id="sgd-learning-rate", placeholder="0.005, 0.01, 0.05", type="number"),
             dbc.Label("Epoch"),
@@ -223,6 +229,7 @@ def get_sgd_model_properties_div(df):
             html.Div([], id = "sgd-model-variables-do-nothing"),
             html.Div([], id = "sgd-train-data-do-nothing"),
             html.Div([], id = "sgd-no-of-neuron-do-nothing"),
+            html.Div([], id = "sgd-no-of-neuron-h2-do-nothing"),
             html.Div([], id = "sgd-learning-rate-do-nothing"),
             html.Div([], id = "sgd-epoch-do-nothing"),
             html.Div([], id = "sgd-prediction-data-do-nothing")
@@ -271,9 +278,18 @@ def sgd_model_train(value):
     Output('sgd-no-of-neuron-do-nothing' , "children"),
     [Input('sgd-no-of-neuron', 'value')]
 )
-def sgd_model_epoch(value):
+def sgd_model_neuron(value):
     if not value is None:
         db.put("sgd.no_of_neuron", value)
+    return None
+
+@app.callback(
+    Output('sgd-no-of-neuron-h2-do-nothing' , "children"),
+    [Input('sgd-no-of-neuron-h2', 'value')]
+)
+def sgd_model_neuron_h2(value):
+    if not value is None:
+        db.put("sgd.no_of_neuron_h2", value)
     return None
 
 @app.callback(
@@ -308,13 +324,16 @@ def sgd_model_train(n_clicks):
     epoch = db.get('sgd.model_epoch')
     #no_of_hidden_layer = db.get('sgd.no_of_hidden_layer')
     no_of_neuron = db.get('sgd.no_of_neuron')
+    no_of_neuron_h2 = db.get('sgd.no_of_neuron_h2')
+    layer = 1
+    if not no_of_neuron_h2 is None:
+        layer = 2
+    db.put("sgd.model_layer", layer)
     if c is None and var is None and train is None and lr is None and epoch is None:
         div = ""
     elif train is None or train < 0 or train > 100:
         div = common.error_msg('Training % should be between 0 - 100 !!')
     elif (not c is None) and (not var is None) and (not train is None) and (not lr is None) and (not epoch is None):
-        #parameters = "Training Data = " + str(train) + " % Testing Data = " + str(100 - train) + " % Learning rate = " + str(lr) + " Epoch = " + str(epoch)
-
         try:
             cols = [] + var
             cols.append(c)
@@ -333,15 +352,21 @@ def sgd_model_train(n_clicks):
             distinct_count_df = distinct_count_df.join(distinct_count_df_test.set_index('Class'), on='Class')
             distinct_count_df['Class'] = distinct_count_df['Class'].map(reverse_quantized_classes)
 
-            ycap, loss_dict, cc_percentage, wc_percentage, model, yu = ann_training(train_df[var], train_df[c], no_of_neuron, lr, epoch)
-            ycap, cc_percentage, wc_percentage = ann_testing(test_df[var], test_df[c], model, yu)
+            if layer == 1:
+                ycap, loss_dict, cc_percentage, wc_percentage, model, yu = ann_training(train_df[var], train_df[c], no_of_neuron, lr, epoch)
+                ycap, cc_percentage, wc_percentage = ann_testing(test_df[var], test_df[c], model, yu)
+            elif layer == 2:
+                ycap, loss_dict, cc_percentage, wc_percentage, model, yu = ann_training_h2(train_df[var], train_df[c], no_of_neuron, no_of_neuron_h2, lr, epoch)
+                ycap, cc_percentage, wc_percentage = ann_testing_h2(train_df[var], train_df[c], model, yu)
 
             summary = {}
             summary['Total Training Data'] = len(train_df)
             summary['Total Testing Data'] = len(test_df)
             summary['Total Number of Features in Dataset'] = len(var)
-            summary['No of Hidden Layer'] = 1
-            summary['No of Neuron in each Hidden Layer'] = no_of_neuron
+            summary['Total no of Layers'] = layer + 2
+            summary['No of Hidden Layer'] = layer
+            summary['No of Neuron in Hidden Layer 1'] = no_of_neuron
+            summary['No of Neuron in Hidden Layer 2'] = no_of_neuron_h2
             summary['Activation Function'] = 'Sigmoid'
             summary['Learning rate'] = lr
             summary['Epochs'] = epoch
@@ -356,7 +381,6 @@ def sgd_model_train(n_clicks):
             db.put('sgd.model', model)
             db.put('sgd.model_yu', yu)
             db.put('sgd.summary', summary)
-
             confusion_df = get_confusion_matrix(test_df, c, var, model, yu, reverse_quantized_classes)
         except Exception as e:
             traceback.print_exc()
@@ -432,10 +456,15 @@ def sgd_model_predict(n_clicks):
     if len(predict_data.split(',')) != n_var:
         return (common.error_msg('Enter Valid Prediction Data!!'), "")
     try:
-        feature_vector = get_predict_data_list(predict_data)
-        df = pd.DataFrame(columns=var)
-        df.loc[0] = feature_vector
-        prediction = ann_predict(df, model, yu)
+        layer = db.get("sgd.model_layer")
+        if layer == 1:
+            feature_vector = get_predict_data_list(predict_data)
+            df = pd.DataFrame(columns=var)
+            df.loc[0] = feature_vector
+            prediction = ann_predict(df, model, yu)
+        elif layer == 2:
+            feature_vector = get_predict_data_list(predict_data)
+            prediction = ann_predict_h2(feature_vector, model, yu)
         reverse_quantized_classes = db.get('sgd.reverse_quantized_classes')
         prediction = reverse_quantized_classes[int(prediction)]
         db.put('sgd.prediction', prediction)
@@ -488,7 +517,11 @@ def get_confusion_matrix(df, c, var, model, yu, reverse_quantized_classes):
         clazz = str(int(row[c]))
         feature_vector = df[var].iloc[i:i+1]
         i = i + 1
-        prediction = ann_predict(feature_vector, model, yu)
+        layer = db.get("sgd.model_layer")
+        if layer == 1:
+            prediction = ann_predict(feature_vector, model, yu)
+        elif layer == 2:
+            prediction = ann_predict_h2(feature_vector, model, yu)
         prediction = str(int(prediction))
         d[clazz]['t_rel'] = d[clazz]['t_rel'] + 1
         d[prediction]['t_ret'] = d[prediction]['t_ret'] + 1
@@ -498,6 +531,14 @@ def get_confusion_matrix(df, c, var, model, yu, reverse_quantized_classes):
     i = 0
     for k, v in d.items():
         key = reverse_quantized_classes[int(k)]
-        df.loc[i] = [key, v['t_ret'],v['t_rel'], v['rr'], round(v['rr']/v['t_ret'], 4), round(v['rr']/v['t_rel'], 4)]
+        if v['t_ret'] == 0:
+            t1 = '-'
+        else:
+            t1 = round(v['rr']/v['t_ret'], 4)
+        if v['t_rel'] == 0:
+            t2 = '-'
+        else:
+            t2 = round(v['rr']/v['t_rel'], 4)
+        df.loc[i] = [key, v['t_ret'],v['t_rel'], v['rr'], t1, t2]
         i = i+1
     return df
