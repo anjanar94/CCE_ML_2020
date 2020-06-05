@@ -136,7 +136,7 @@ def calculate_predict_accuracy(prediction_results):
     return accuracy
 
 
-def knn_algorithm(data_filename, k):
+def knn_algorithm(dataset, k, test_split = 0.2):
     '''
     Implements the KNN algorithm for the given
     :param data_filename: Input data
@@ -145,14 +145,14 @@ def knn_algorithm(data_filename, k):
     :return: A tuple of test data, predicted class
     '''
     result = []
-    dataset = load_input_csv(data_filename)
+    #dataset = load_input_csv(data_filename)
     n_columns = len(dataset[0])
     print(f"Loaded file {data_filename} with {len(dataset)} rows and {len(dataset[0])} columns")
 
     for i in range(n_columns - 1):
         dataset = convert_to_float(dataset, i)
 
-    train_data, test_data = split_data(dataset, 0.2)
+    train_data, test_data = split_data(dataset, test_split)
     lookup = get_class_lookup(train_data)
 
     for row in test_data:
@@ -160,10 +160,10 @@ def knn_algorithm(data_filename, k):
         result.append((row, lookup[res]))
     accuracy=calculate_predict_accuracy(result)
 
-    return result,accuracy
+    return result, len(train_data), len(test_data), accuracy
 
 
-def knn_predict(data_filename, test_filename, k):
+def knn_predict(dataset, predict_data, k):
     '''
     Implements the KNN algorithm for the given
     :param data_filename: Input data
@@ -172,14 +172,15 @@ def knn_predict(data_filename, test_filename, k):
     :return: A tuple of test data, predicted class
     '''
     result = []
-    dataset = load_input_csv(data_filename)
+    #dataset = load_input_csv(data_filename)
     n_columns = len(dataset[0])
-    print(f"Loaded file {data_filename} with {len(dataset)} rows and {len(dataset[0])} columns")
+    print(f"Loaded dataset with {len(dataset)} rows and {len(dataset[0])} columns")
 
     for i in range(n_columns - 1):
         dataset = convert_to_float(dataset, i)
 
-    test_data = load_input_csv(test_filename)
+    #test_data = load_input_csv(test_filename)
+    test_data = predict_data
 
     for i in range(n_columns - 1):
         test_data = convert_to_float(test_data, i)

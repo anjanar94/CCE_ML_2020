@@ -302,7 +302,7 @@ def nlcl_model_train(n_clicks):
             db.put('nlcl.data_train', train_df)
             db.put('nlcl.data_test', test_df)
             db.put('nlcl.model_summary', summary)
-            #db.put('nlcl.model_instance', instanceOfLR)
+            db.put('nlcl.model_instance', model)
             #confusion_df = get_confusion_matrix(test_df, c, var, instanceOfLR)
         except Exception as e:
             traceback.print_exc()
@@ -339,7 +339,7 @@ def nlcl_model_train(n_clicks):
             figure={
                 'data': graph_data,
                 'layout': dict(
-                    title='Boundaries & Train DataSet Scatter Plot',
+                    title='Boundaries & Train Data Set Scatter Plot',
                     xaxis={'title': x_col},
                     yaxis={'title': y_col},
                     margin={'l': 40, 'b': 40},
@@ -358,13 +358,13 @@ def nlcl_model_train(n_clicks):
             graph,
             #html.H2('Confusion Matrix (Precision & Recall):'),
             #dbc.Table.from_dataframe(confusion_df, striped=True, bordered=True, hover=True, style = common.table_style),
-            #html.H2('Prediction/Classification:'),
-            #html.P('Features to be Predicted (comma separated): ' + ','.join(var), style = {'font-size': '16px'}),
-            #dbc.Input(id="nlcl-prediction-data", placeholder=','.join(var), type="text"),
-            #html.Br(),
-            #dbc.Button("Predict", color="primary", id = 'nlcl-predict'),
-            #html.Div([], id = "nlcl-prediction"),
-            #html.Div([],id = "nlcl-predicted-scatter-plot")
+            html.H2('Prediction/Classification:'),
+            html.P('Features to be Predicted (comma separated): ' + ','.join(var), style = {'font-size': '16px'}),
+            dbc.Input(id="nlcl-prediction-data", placeholder=','.join(var), type="text"),
+            html.Br(),
+            dbc.Button("Predict", color="primary", id = 'nlcl-predict'),
+            html.Div([], id = "nlcl-prediction"),
+            html.Div([],id = "nlcl-predicted-scatter-plot")
         ])
     else:
         div = common.error_msg('Select Proper Model Parameters!!')
@@ -385,109 +385,69 @@ def nlcl_model_prediction_data(value):
     [Input('nlcl-predict', 'n_clicks')]
 )
 def nlcl_model_predict(n_clicks):
+    c = db.get('nlcl.model_class')
     predict_data = db.get("nlcl.model_prediction_data")
-    summary = db.get('nlcl.model_summary')
-    lr_instance = db.get('nlcl.model_instance')
-    n_var = summary['Total Number of Features in Dataset']
+    test_df = db.get('nlcl.data_test')
+    #summary = db.get('nlcl.model_summary')
+    model = db.get('nlcl.model_instance')
+    var = db.get('nlcl.model_variables')
+    n_var = len(var)
     if predict_data is None:
         return ("" , "")
     if len(predict_data.split(',')) != n_var:
         return (common.error_msg('Enter Valid Prediction Data!!'), "")
     try:
+        cols = [] + var
+        cols.append(c)
         feature_vector = get_predict_data_list(predict_data)
-        feature_vector = np.array(feature_vector)
-        prediction = lr_instance.predict(feature_vector)
-        db.put('nlcl.prediction', prediction)
+        #TODO Team 3 Predict API is not available.
+        ""
     except Exception as e:
         return (common.error_msg("Exception during prediction: " + str(e)), "")
-    df = db.get('nlcl.data_train')
-    df = df.iloc[:, :-1]
-    div = html.Div([
-        html.Div([html.H2("Predicted & Testing Data Scatter Plot")], style={'width': '100%', 'display': 'flex', 'align-items': 'center', 'justify-content': 'center'}),
-        dbc.Row([
-            dbc.Col([
-                dbc.Label("Select X Axis"),
-                dcc.Dropdown(
-                    id = 'nlcl-x-axis-predict',
-                    options=[{'label':col, 'value':col} for col in [*df]],
-                    value=None,
-                    multi=False
-                ),
-                html.Br(),
-                dbc.Label("Select Y Axis"),
-                dcc.Dropdown(
-                    id = 'nlcl-y-axis-predict',
-                    options=[{'label':col, 'value':col} for col in [*df]],
-                    value=None,
-                    multi=False
-                ),
-                html.Br(),
-                dbc.Button("Plot", color="primary", id = 'nlcl-predict-scatter-plot-button'),
-                html.Div([], id = "nlcl-x-axis-predict-do-nothing"),
-                html.Div([], id = "nlcl-y-axis-predict-do-nothing")
-            ], md=2,
-            style = {'margin': '10px', 'font-size': '16px'}),
-            dbc.Col([], md=9, id="nlcl-scatter-plot-predict")
-        ]),
 
-    ])
-    return (common.success_msg('Predicted/Classified Class = ' + prediction), div)
+    clazz_col = c
+    test_df.columns = cols
+    df = test_df
+    x_col = var[0]
+    y_col = var[1]
+    xp = [feature_vector[0]]
+    yp = [feature_vector[1]]
+    x1, y1 = get_rect_coordinates(model[0])
+    x2, y2 = get_rect_coordinates(model[1])
+    x3, y3 = get_rect_coordinates(model[2])
+    graph_data = [
+        go.Scatter(
+            x=df[df[clazz_col] == clazz][x_col],
+            y=df[df[clazz_col] == clazz][y_col],
+            text=df[df[clazz_col] == clazz][clazz_col],
+            mode='markers',
+            opacity=0.8,
+            marker={
+                'size': 15,
+                'line': {'width': 0.5, 'color': 'white'}
+            },
+            name=clazz
+        ) for clazz in df[clazz_col].unique()
+    ]
+    graph_data.append(go.Scatter(x=xp, y=yp,
+        mode='markers',
+        opacity=0.8,
+        marker={
+            'size': 20,
+            'line': {'width': 0.5, 'color': 'white'}
+        },
+        text = 'Predicted - DataPoint',
+        name = 'Predicted - DataPoint'))
+    graph_data.append(go.Scatter(x=x1, y=y1, text = 'Specific Rectangle', name = 'Specific Rectangle'))
+    graph_data.append(go.Scatter(x=x3, y=y3, text = 'Optimal Rectangle', name = 'Optimal Rectangle'))
+    graph_data.append(go.Scatter(x=x2, y=y2, text = 'Generic Rectangle', name = 'Generic Rectangle'))
 
-@app.callback(
-    Output('nlcl-x-axis-predict-do-nothing' , "children"),
-    [Input('nlcl-x-axis-predict', 'value')]
-)
-def nlcl_x_axis(value):
-    if not value is None:
-        db.put("nlcl.x_axis_predict", value)
-    return None
-
-@app.callback(
-    Output('nlcl-y-axis-predict-do-nothing' , "children"),
-    [Input('nlcl-y-axis-predict', 'value')]
-)
-def nlcl_y_axis(value):
-    if not value is None:
-        db.put("nlcl.y_axis_predict", value)
-    return None
-
-@app.callback(
-    Output("nlcl-scatter-plot-predict", "children"),
-    [Input('nlcl-predict-scatter-plot-button', 'n_clicks')]
-)
-def nlcl_scatter_plot(n):
-    df = db.get("nlcl.data_test")
-    clazz_col = db.get('nlcl.model_class')
-    x_col = db.get("nlcl.x_axis_predict")
-    y_col = db.get("nlcl.y_axis_predict")
-    predict_data = db.get("nlcl.model_prediction_data")
-    prediction = db.get('nlcl.prediction')
-
-    feature_vector = get_predict_data_list(predict_data)
-    feature_vector.append('Predicted-'+prediction)
-    df.loc[len(df)] = feature_vector
-
-    if clazz_col is None or x_col is None or y_col is None:
-        return None
     graph = dcc.Graph(
         id='nlcl-x-vs-y-predict',
         figure={
-            'data': [
-                go.Scatter(
-                    x=df[df[clazz_col] == clazz][x_col],
-                    y=df[df[clazz_col] == clazz][y_col],
-                    text=df[df[clazz_col] == clazz][clazz_col],
-                    mode='markers',
-                    opacity=0.8,
-                    marker={
-                        'size': 15,
-                        'line': {'width': 0.5, 'color': 'white'}
-                    },
-                    name=clazz
-                ) for clazz in df[clazz_col].unique()
-            ],
+            'data': graph_data,
             'layout': dict(
-                #title='Scatter Plot',
+                title='Boundaries, Predict Data Point & Test Data Set Scatter Plot',
                 xaxis={'title': x_col},
                 yaxis={'title': y_col},
                 margin={'l': 40, 'b': 40},
@@ -496,7 +456,11 @@ def nlcl_scatter_plot(n):
             )
         }
     )
-    return graph
+
+    div = html.Div([
+        graph
+    ])
+    return ("", div)
 
 def get_predict_data_list(predict_data: str) -> []:
     predict_data = predict_data.split(',')
