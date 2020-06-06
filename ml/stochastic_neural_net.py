@@ -174,7 +174,13 @@ def Sigmoid(Z):
 
 ## Function for predicting / forcasting for a X dataset
 def ann_predict(x_df, model_param, yu):
-    X = x_df.values.transpose()
+    if isinstance(x_df, pd.DataFrame):
+        X = x_df.values.transpose()
+    elif isinstance(x_df, list):
+        X = np.zeros((len(x_df),1))
+        for i in range(len(x_df)):
+            X[i,0] = x_df[i]
+    
     Z1 = model_param['W1'].dot(X) + model_param['b1']
     A1 = Sigmoid(Z1)
     Z2 = model_param['W2'].dot(A1) + model_param['b2']
