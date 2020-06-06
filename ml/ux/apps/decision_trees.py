@@ -14,268 +14,148 @@ from ml.framework.database import db
 from ml.framework.file_utils import FileUtils
 from ml.framework.data_utils import DataUtils
 
-from ml.decision_trees import DecisionTree
+from ml.decision_tree.main import train
 
 layout = html.Div([
     common.navbar("Decision Trees"),
     html.Div([], style = {'padding': '30px'}),
     html.Br(),
-    html.Div([
-        html.H2("Load and Select a file from all the cleaned files:"),
-        dbc.Button("Load Cleaned File", color="primary", id = 'dt-load-cleaned-files', className="mr-2", style={'display': 'inline-block'}),
-        dbc.Button("Clear", color="secondary", id = 'dt-clear-db', className="mr-2", style={'display': 'inline-block'})
-    ],style = {'margin': '10px'}),
-    html.Div([
-    dcc.Dropdown(
-        id = 'dt-selected-cleaned-file',
-        options = common.get_options('clean'),
-        value = None,
-        multi = False
-    )],
-    style = {'margin': '10px', 'width': '50%'}),
-    html.Div([], id = "dt-clear-db-do-nothing"),
-    html.Div([],id = "decision-trees-selected-div")
+    html.H2('Decision Tree API Integration for Data Set banknote.csv'),
+    html.Div([],id = "decision-trees-new-selected-div")
 ])
 
 @app.callback(
-    Output("dt-selected-cleaned-file", "options"),
-    [Input('dt-load-cleaned-files', 'n_clicks')]
+    Output("decision-trees-new-selected-div", "children"),
+    [Input('decision-trees', 'value')]
 )
-def dt_selected_file(n_clicks):
-    return common.get_options('clean')
-
-@app.callback(
-    Output("dt-clear-db-do-nothing", "options"),
-    [Input('dt-clear-db', 'n_clicks')]
-)
-def dt_selected_file(n_clicks):
-    return db.clear('dt.')
-
-@app.callback(
-    Output("decision-trees-selected-div", "children"),
-    [Input('dt-selected-cleaned-file', 'value')]
-)
-def dt_display_selected_file_scatter_plot(value):
-    db_value = db.get("dt.file")
-    if value is None and db_value is None:
-        return common.msg("Please select a cleaned file to proceed!!")
-    elif value is None and not db_value is None:
-        value = db_value
-
-    db.put("dt.file", value)
+def dtn_display_selected_file_scatter_plot(value):
+    value = "banknote"
+    db.put("dtn.file", value)
     file = value
     path = FileUtils.path('clean', file)
     df = DataUtils.read_csv(path)
-    db.put("dt.data", df)
+    save_path = FileUtils.path('extra', 'banknote.csv')
+    df.to_csv(save_path, index=False, header = False)
+    db.put("dtn.data", df)
+
+    db.put('dtn.model_class', 'class')
+    db.put('dtn.model_variables', ['variance','skewness','curtosis','entropy'])
+
+    call_path = FileUtils.path('nets', 'dt_banknote_call1.csv')
+    cdf = DataUtils.read_csv(call_path)
+
+    trace_1 = go.Scatter(x = cdf['max_depth'], y = cdf['avg_train_score'], name = 'Average Train Score')
+    trace_2 = go.Scatter(x = cdf['max_depth'], y = cdf['avg_test_score'], name = 'Average Test Score')
+    title = go.Layout(title = 'Depth of Tree Vs Performance Plot', hovermode = 'closest', xaxis={'title': 'Depth of Tree'}, yaxis={'title': 'Performance'})
+    fig = go.Figure(data = [trace_1, trace_2], layout = title)
 
     div = html.Div([
         common.msg("Selected cleaned file: "+ file),
-        dbc.Table.from_dataframe(df.head(10).astype(str), striped=True, bordered=True, hover=True, style = common.table_style),
-        #html.Div([html.H3("Data Statistics")], style={'width': '100%', 'display': 'flex', 'align-items': 'center', 'justify-content': 'center'}),
-        #dbc.Table.from_dataframe(stats, striped=True, bordered=True, hover=True, style = common.table_style),
+        dbc.Table.from_dataframe(df.head(10).round(5).astype(str), striped=True, bordered=True, hover=True, style = common.table_style),
         html.Br(),
-        get_dt_model_properties_div(df),
-        html.Div([], id = "dt-trained-model", style = {'margin': '10px'}),
+        html.H2('Using Default parameters for both max_depth and min_size.'),
+        html.H2('Max Depth = 2 to 15'),
+        html.H2('Min Size = 10'),
+        dbc.Table.from_dataframe(cdf.round(4), striped=True, bordered=True, hover=True, style = common.table_style),
+        html.Br(),
+        dcc.Graph(id='dtn-plot', figure=fig),
+        html.Br(),
+        get_dtn_model_properties_div(df),
+        dcc.Loading(id="dtn-model-training",
+            children=[html.Div([], id = "dtn-trained-model", style = {'margin': '10px'})],
+            type="default"),
     ])
 
     return div
 
-def get_dt_model_properties_div(df):
-    dt_model_properties = dbc.Card([
+def get_dtn_model_properties_div(df):
+    dtn_model_properties = dbc.Card([
         dbc.FormGroup([
             html.H2("Train Decision Tree Model"),
-            dbc.Label("Class"),
+            dbc.Label("Max Depth"),
             dcc.Dropdown(
-                id="dt-model-class",
-                options=[{'label':col, 'value':col} for col in [*df]],
+                id="dtn-max-depth",
+                options=[{'label':col, 'value':col} for col in range(2,15)],
                 value=None,
                 multi=False),
-            dbc.Label("Features"),
-            dcc.Dropdown(
-                id="dt-model-variables",
-                options=[{'label':col, 'value':col} for col in [*df]],
-                value=None,
-                multi=True),
-            dbc.Label("Train Data %"),
-            dbc.Input(id="dt-train-data", placeholder="70,75,80,85,90", type="number"),
+            dbc.Label("Min Size"),
+            dbc.Input(id="dtn-min-size", placeholder="10,20,30...", type="number"),
             html.Br(),
-            dbc.Button("Train", color="primary", id = 'dt-train-model'),
+            dbc.Button("Train", color="primary", id = 'dtn-train-model'),
 
-            html.Div([], id = "dt-model-class-do-nothing"),
-            html.Div([], id = "dt-model-variables-do-nothing"),
-            html.Div([], id = "dt-train-data-do-nothing"),
-            html.Div([], id = "dt-prediction-data-do-nothing")
+            html.Div([], id = "dtn-max-depth-do-nothing"),
+            html.Div([], id = "dtn-min-size-do-nothing")
             ],
             style = {'padding': '10px'})
         ])
 
-    dt_model_properties_div = html.Div([
+    dtn_model_properties_div = html.Div([
         dbc.Row([
-            dbc.Col(dt_model_properties, md=6)
+            dbc.Col(dtn_model_properties, md=6)
         ],
         align="center")
     ],
     style = {'margin': '10px', 'font-size': '16px'})
 
-    return dt_model_properties_div
+    return dtn_model_properties_div
 
 @app.callback(
-    Output('dt-model-class-do-nothing' , "children"),
-    [Input('dt-model-class', 'value')]
+    Output('dtn-max-depth-do-nothing' , "children"),
+    [Input('dtn-max-depth', 'value')]
 )
-def dt_model_class(value):
+def dtn_model_class(value):
     if not value is None:
-        db.put("dt.model_class", value)
+        db.put("dtn.max_depth", value)
     return None
 
 @app.callback(
-    Output('dt-model-variables-do-nothing' , "children"),
-    [Input('dt-model-variables', 'value')]
+    Output('dtn-min-size-do-nothing' , "children"),
+    [Input('dtn-min-size', 'value')]
 )
-def dt_model_variables(value):
+def dtn_model_variables(value):
     if not value is None:
-        db.put("dt.model_variables", value)
+        db.put("dtn.min_size", value)
     return None
 
 @app.callback(
-    Output('dt-train-data-do-nothing' , "children"),
-    [Input('dt-train-data', 'value')]
+    Output('dtn-trained-model' , "children"),
+    [Input('dtn-train-model', 'n_clicks')]
 )
-def dt_model_train(value):
-    if not value is None:
-        db.put("dt.model_train", value)
-    return None
-
-@app.callback(
-    Output('dt-trained-model' , "children"),
-    [Input('dt-train-model', 'n_clicks')]
-)
-def dt_model_train(n_clicks):
-    c = db.get('dt.model_class')
-    var = db.get('dt.model_variables')
-    train = db.get('dt.model_train')
-    if c is None and var is None and train is None:
+def dtn_model_train(n_clicks):
+    c = db.get('dtn.model_class')
+    var = db.get('dtn.model_variables')
+    max_depth = db.get('dtn.max_depth')
+    min_size = db.get('dtn.min_size')
+    folds = 5
+    if c is None or var is None or max_depth is None or min_size is None:
         div = ""
-    elif train is None or train < 0 or train > 100:
-        div = common.error_msg('Training % should be between 0 - 100 !!')
-    elif (not c is None) and (not var is None) and (not train is None):
-
+    elif (not c is None) and (not var is None) and (not max_depth is None) and (not min_size is None):
         try:
-            cols = [] + var
-            cols.append(c)
-            df = db.get('dt.data')
-            df = df[cols].astype(str)
-            train_df, test_df = common.split_df(df, c, train)
+            path = FileUtils.path('extra', 'banknote.csv')
 
-            distinct_count_df_total = get_distinct_count_df(df, c, 'Total Count')
-            distinct_count_df_train = get_distinct_count_df(train_df, c, 'Training Count')
-            distinct_count_df_test = get_distinct_count_df(test_df, c, 'Testing Count')
-
-            distinct_count_df = distinct_count_df_total.join(distinct_count_df_train.set_index('Class'), on='Class')
-            distinct_count_df = distinct_count_df.join(distinct_count_df_test.set_index('Class'), on='Class')
-
-            training_set = train_df.values.tolist()
-            model = DecisionTree()
-            tree = model.learn(training_set, cols, c)
-            print(tree)
-
-            test_set = test_df.values.tolist()
-            y_predict = model.predict(test_set)
-            cc_percentage = model.score(test_set, y_predict) * 100
+            tree, avg_score, avg_f1_score = train(path, max_depth, min_size, folds)
 
             summary = {}
-            summary['Total Training Data'] = len(train_df)
-            summary['Total Testing Data'] = len(test_df)
-            summary['Total Number of Features in Dataset'] = len(var)
-            summary['Model Accuracy %'] = round(cc_percentage, 2)
-            summary['Features'] = str(var)
+            summary['Max Depth'] = max_depth
+            summary['Min Size'] = min_size
+            summary['Folds'] = folds
+            summary['Average Score'] = round(avg_score, 4)
+            summary['Average F1 Score'] = round(avg_f1_score, 4)
             summary_df = pd.DataFrame(summary.items(), columns=['Parameters', 'Value'])
 
-            db.put('dt.data_train', train_df)
-            db.put('dt.data_test', test_df)
-            db.put('dt.model_summary', summary)
-            db.put('dt.model_instance', model)
-            #confusion_df = get_confusion_matrix(test_df, c, var, instanceOfLR)
+            db.put('dtn.model_summary', summary)
+            db.put('dtn.model_instance', tree)
         except Exception as e:
             traceback.print_exc()
             return common.error_msg("Exception during training model: " + str(e))
 
         div = html.Div([
-            html.H2('Class Grouping in Data:'),
-            dbc.Table.from_dataframe(distinct_count_df, striped=True, bordered=True, hover=True, style = common.table_style),
-            html.H2('Tree:'),
-            html.H2(str(tree)),
-            html.Br(),
             html.H2('Model Parameters & Summary:'),
             dbc.Table.from_dataframe(summary_df, striped=True, bordered=True, hover=True, style = common.table_style),
             html.Br(),
-            #html.H2('Confusion Matrix (Precision & Recall):'),
-            #dbc.Table.from_dataframe(confusion_df, striped=True, bordered=True, hover=True, style = common.table_style),
-            html.Br(),
-            html.H2('Prediction/Classification:'),
-            html.P('Features to be Predicted (comma separated): ' + ','.join(var), style = {'font-size': '16px'}),
-            dbc.Input(id="dt-prediction-data", placeholder=','.join(var), type="text"),
-            html.Br(),
-            dbc.Button("Predict", color="primary", id = 'dt-predict'),
-            html.Div([], id = "dt-prediction")
+            html.H2('Tree'),
+            html.H2(str(tree)),
             ])
     else:
         div = common.error_msg('Select Proper Model Parameters!!')
     return div
-
-@app.callback(
-    Output('dt-prediction-data-do-nothing' , "children"),
-    [Input('dt-prediction-data', 'value')]
-)
-def dt_model_prediction_data(value):
-    if not value is None:
-        db.put("dt.model_prediction_data", value)
-    return None
-
-@app.callback(
-    Output('dt-prediction' , "children"),
-    [Input('dt-predict', 'n_clicks')]
-)
-def dt_model_predict(n_clicks):
-    var = db.get('dt.model_variables')
-    predict_data = db.get("dt.model_prediction_data")
-    model = db.get('dt.model_instance')
-    n_var = len(var)
-
-    if predict_data is None:
-        return ("" , "")
-    if len(predict_data.split(',')) != n_var:
-        return (common.error_msg('Enter Valid Prediction Data!!'), "")
-    try:
-        feature_vector = get_predict_data_list(predict_data)
-        feature_vector.append(-1)
-        feature_vector = [feature_vector]
-
-        prediction = model.predict(feature_vector)
-        print(prediction)
-        prediction = str(prediction[0])
-        db.put('dt.prediction', prediction)
-    except Exception as e:
-        traceback.print_exc()
-        return (common.error_msg("Exception during prediction: " + str(e)), "")
-    return common.success_msg('Predicted/Classified Class = ' + prediction)
-
-def get_distinct_count_df(df, c, col):
-    classes = df[c].unique()
-    distinct_count = {}
-    total = 0
-    for clazz in classes:
-        tdf = df.loc[df[c] == clazz]
-        count = len(tdf)
-        distinct_count[clazz] = count
-        total = total + count
-    distinct_count['Gross Total = '] = total
-    distinct_count = pd.DataFrame(distinct_count.items(), columns=['Class', col])
-    return distinct_count
-
-def get_predict_data_list(predict_data: str) -> []:
-    predict_data = predict_data.split(',')
-    feature_vector = []
-    for d in predict_data:
-        feature_vector.append(str(d))
-    return feature_vector

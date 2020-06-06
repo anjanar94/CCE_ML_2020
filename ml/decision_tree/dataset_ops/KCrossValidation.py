@@ -45,6 +45,7 @@ def evaluate_kfold(dataset, process_dataset, max_depth, min_size, n_folds, *args
     folds = kcs.cross_validation_split(dataset, n_folds)
     scores = list()
     best_node=[]
+    training_s=[]
     for fold in folds:
         train_set = list(folds)
         train_set.remove(fold)
@@ -72,10 +73,11 @@ def evaluate_kfold(dataset, process_dataset, max_depth, min_size, n_folds, *args
         train_score = accuarcy_metric(actual=y_train, predicted=training)
         f1 = f1_score(y_test, predicted)
         scores.append({'training_score':train_score,'accuracy':accuracy, 'F1_score':f1})
-
+        training_s.append(train_score)
     #get position for max Accuracy
-    position=training.index(max(training))
+    position=training_s.index(max(training_s))
     best_tree=best_node[position]
+
 
 
     return scores,best_tree

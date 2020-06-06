@@ -3,7 +3,7 @@ import dash_html_components as html
 from dash.dependencies import Input, Output
 
 from ml.ux.app import app
-from ml.ux.apps import home, linear_classification, non_linear_classification, neural_network, stochastic_gradient_descent, decision_trees, decision_trees_new, pca, knn
+from ml.ux.apps import home, linear_classification, non_linear_classification, neural_network, stochastic_gradient_descent, decision_trees, pca, knn
 
 app.layout = html.Div([
     dcc.Location(id='url', refresh=False),
@@ -26,8 +26,6 @@ def display_page(pathname):
         return stochastic_gradient_descent.layout
     elif pathname == '/apps/decision-trees':
         return decision_trees.layout
-    elif pathname == '/apps/decision-trees-new':
-        return decision_trees_new.layout
     elif pathname == '/apps/pca':
         return pca.layout
     elif pathname == '/apps/knn':

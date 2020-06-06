@@ -53,7 +53,7 @@ def convert_feature_to_x_y_relation( feature):
 
     key_func = lambda x: x[0].strip() if isinstance(x[0],str) else x[0]
     ls.sort()
-    gr = []  
+    gr = []
 
     for key, group in itertools.groupby(ls, key_func):
        #print("key_func",key, list(group))
@@ -68,7 +68,7 @@ def convert_feature_to_x_y_relation( feature):
         elif gr[i][0][1] == 0:
             final_list.append([gr[i][0][2],0])
         elif gr[i][0][1] == 1:
-            final_list.append([0,gr[i][0][2]])        
+            final_list.append([0,gr[i][0][2]])
     return final_list
 
 #############################################Variable dist is a dictionary with Key as feature and value as a list giving feature value and dependent variable#######################################################
@@ -78,7 +78,7 @@ def get_dictionary_with_x_groups(columname,X,Y):
         temp=[]
         for x,y in zip([x[colm] for x in X] ,Y):
             temp.append([x,y])
-        Variable_dict[columname[colm]] = temp  
+        Variable_dict[columname[colm]] = temp
         temp.append([x,y])
     return Variable_dict
 
@@ -90,7 +90,7 @@ def give_x_information_gain(Variable_dict, Y_count_list, attributes):
         #print("Information Gain for Feature %s is %s" %(key,  dt.gain(Y_count_list,dt.convert_feature_to_x_y_relation(Variable_dict[key]))))
         root[key] =  gain(Y_count_list,convert_feature_to_x_y_relation(Variable_dict[key]))
         groups[key] = Variable_dict[key]
-    Max_IG = max(root, key=root.get) 
+    Max_IG = max(root, key=root.get)
     root_index = attributes.index(Max_IG)
     Max_IG_Value = root[Max_IG]
     return Max_IG,root_index,Max_IG_Value
@@ -122,4 +122,3 @@ def calc_total_gini(groups, classes, total_samples):
         t_gini += gini_index(scr, len(group), total_samples)
 
     return t_gini
-

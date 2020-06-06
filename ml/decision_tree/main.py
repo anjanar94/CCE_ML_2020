@@ -8,7 +8,7 @@ import ml.decision_tree.dataset_ops.SplitXy as spxy
 import warnings
 
 def train(file, maxdepth, minsize, folds):
-    print('Decision Tree New API!!')
+    print('Decision Tree API!!')
     dataset = dh.read_csv(file, headers=False)
     acc_f1_list, best_tree =  kcv.evaluate_kfold(dataset, process_dataset_banknote, max_depth=maxdepth, min_size=minsize, n_folds=folds)
     avg_score,avg_f1_score,avg_train_score = calculate(acc_f1_list)
