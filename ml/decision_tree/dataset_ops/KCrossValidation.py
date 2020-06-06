@@ -1,8 +1,8 @@
-import KCrossSplit as kcs
-from predict import predict
-import SplitXy
-import DatasetHandler as dh
-import TreeBuild as tb
+import ml.decision_tree.dataset_ops.KCrossSplit as kcs
+from ml.decision_tree.decision_trees.predict import predict
+import ml.decision_tree.dataset_ops.SplitXy
+import ml.decision_tree.dataset_ops.DatasetHandler as dh
+import ml.decision_tree.decision_trees.TreeBuild as tb
 
 import pprint
 
@@ -72,7 +72,7 @@ def evaluate_kfold(dataset, process_dataset, max_depth, min_size, n_folds, *args
         train_score = accuarcy_metric(actual=y_train, predicted=training)
         f1 = f1_score(y_test, predicted)
         scores.append({'training_score':train_score,'accuracy':accuracy, 'F1_score':f1})
-    
+
     #get position for max Accuracy
     position=training.index(max(training))
     best_tree=best_node[position]

@@ -1,5 +1,5 @@
-from predict import terminal_pred
-import SplitData as sd
+from ml.decision_tree.decision_trees.predict import terminal_pred
+import ml.decision_tree.decision_trees.SplitData as sd
 
 def recursive_split(node, depth, max_depth, min_size, ignore=''):
     left, right = node['groups']

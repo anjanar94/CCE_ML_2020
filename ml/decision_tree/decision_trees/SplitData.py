@@ -1,4 +1,4 @@
-import impurity as gini
+import ml.decision_tree.decision_trees.impurity as gini
 
 def test_split(index, value, dataset):
     left, right = list(), list()
